@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "coordinator": "technical-bid-orchestrator",
+  "principles": {
+    "chapter_agent_min": 2,
+    "chapter_agent_max": 6,
+    "minimalism_router": "config/minimalism-router.json",
+    "prefer_deterministic_gate_before_review_agent": true,
+    "require_source_trace": true,
+    "require_human_review": true,
+    "block_word_export_on_high_risk": true
+  },
+  "stages": [
+    {
+      "id": "intake",
+      "agents": ["intake-librarian"],
+      "default_execution_level": "L0",
+      "context_policy": "checklist-and-artifact-refs",
+      "agents_only_when": "资料无法按文件类型、元数据或人工清单完成隔离，需要语义判断版本、项目或标包归属",
+      "depends_on": [],
+      "deterministic_checks": ["check-sources"],
+      "outputs": [
+        "state/workflow-state.json",
+        "inventory/source-readiness.json",
+        "inventory/source-index.json",
+        "inventory/project-whitelist.json",
+        "inventory/rag-fragments.json"
+      ]
+    },
+    {
+      "id": "requirements",
+      "agents": ["requirement-analyst"],
+      "default_execution_level": "L1",
+      "context_policy": "compact-state-and-artifact-refs",
+      "depends_on": ["intake"],
+      "deterministic_checks": ["check-requirements", "check-scoring-applicability"],
+      "outputs": [
+        "requirements/atomic-requirements.json",
+        "requirements/marker-register.json",
+        "requirements/rejection-clauses.json",
+        "requirements/scoring-applicability.json",
+        "requirements/scoring-map.json",
+        "requirements/mandatory-requirements.json",
+        "requirements/format-rules.json",
+        "requirements/exclusion-list.json"
+      ],
+      "human_gate": "逐条确认原子要点、* 与 ⭐ 的含义、废标/否决条款、评分项映射和排除清单"
+    },
+    {
+      "id": "planning",
+      "agents": ["chapter-planner"],
+      "default_execution_level": "L2",
+      "context_policy": "compact-state-and-artifact-refs",
+      "depends_on": ["requirements"],
+      "outputs": [
+        "planning/chapter-plan.json",
+        "planning/scoring-section-map.json",
+        "planning/technical-requirement-section-map.json",
+        "tasks/chapter-task-*.json"
+      ],
+      "human_gate": "确认一级章节严格符合招标文件技术投标格式，评分项和技术要求均映射到格式章节内，任务拆分粒度可执行"
+    },
+    {
+      "id": "drafting",
+      "agents": ["chapter-writer-*"],
+      "default_execution_level": "L3",
+      "context_policy": "task-scoped-artifact-refs-only",
+      "depends_on": ["planning"],
+      "parallel": true,
+      "outputs": ["chapters/*.md", "evidence/*.json"]
+    },
+    {
+      "id": "expansion",
+      "agents": ["chapter-expander-*"],
+      "default_execution_level": "L1",
+      "context_policy": "single-chapter-artifact-refs-only",
+      "depends_on": ["drafting"],
+      "parallel": true,
+      "deterministic_checks": ["check-expansion"],
+      "outputs": ["expanded/*.md", "reviews/expansion-*.json"]
+    },
+    {
+      "id": "integration",
+      "agents": ["integration-editor"],
+      "default_execution_level": "L2",
+      "context_policy": "expanded-section-refs-and-traceability-only",
+      "depends_on": ["expansion"],
+      "outputs": ["merged/technical-bid-draft.md", "merged/traceability.json"]
+    },
+    {
+      "id": "review",
+      "agents": ["compliance-reviewer", "residue-reviewer", "format-reviewer"],
+      "default_execution_level": "L0",
+      "context_policy": "deterministic-reports-first-agent-on-failure-only",
+      "depends_on": ["integration"],
+      "parallel": true,
+      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-expansion", "validate"],
+      "agents_only_when": "确定性门禁发现问题且需要语义定位、误报判断或跨章节整改建议",
+      "outputs": ["reviews/*.json"],
+      "human_gate": "处理中风险问题并确认技术偏差"
+    },
+    {
+      "id": "export",
+      "agents": ["exporter"],
+      "default_execution_level": "L0",
+      "context_policy": "review-reports-and-merged-draft-only",
+      "depends_on": ["review"],
+      "outputs": ["output/技术投标文件-初稿.docx"]
+    }
+  ]
+}

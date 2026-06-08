@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "workflow_stage": "intake",
+  "passed_gates": [],
+  "active_gate": "G0",
+  "current_artifact_refs": {
+    "project": "project.json",
+    "source_readiness": "inventory/source-readiness.json",
+    "source_index": "inventory/source-index.json",
+    "requirements": "requirements/atomic-requirements.json",
+    "chapter_plan": "planning/chapter-plan.json",
+    "tasks": "tasks/chapter-task-*.json",
+    "draft": "merged/technical-bid-draft.md"
+  },
+  "known_fields": {
+    "current_package_confirmed": false,
+    "technical_format_confirmed": false,
+    "scoring_group_confirmed": false,
+    "high_risk_open_count": 0
+  },
+  "uncertainty": "",
+  "allowed_tools": [],
+  "constraints": [
+    "pass artifact references instead of full documents",
+    "load only task-authorized sources",
+    "summarize tool outputs before handoff",
+    "escalate to agent only for named uncertainty"
+  ],
+  "failure_context": {
+    "step": "",
+    "error": "",
+    "observations": []
+  }
+}

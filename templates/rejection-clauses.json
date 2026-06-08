@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "clauses": [
+    {
+      "rejection_clause_id": "REJ-001",
+      "requirement_id": "",
+      "trigger_condition": "",
+      "consequence_text": "",
+      "original_text": "",
+      "source": {
+        "file": "",
+        "version": "",
+        "page": "",
+        "section_path": "",
+        "table_or_attachment": ""
+      },
+      "applicable_package": "",
+      "response_location": "",
+      "evidence_required": [],
+      "human_confirmed": false,
+      "status": "OPEN",
+      "notes": ""
+    }
+  ]
+}

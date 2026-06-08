@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "scoring_groups": [
+    {
+      "scoring_group_id": "SCG-001",
+      "source": {
+        "file": "",
+        "page": "",
+        "section_path": "",
+        "original_scope_text": ""
+      },
+      "applies_to_packages": [],
+      "excluded_packages": [],
+      "technical_score_weight": null,
+      "business_score_weight": null,
+      "price_score_weight": null,
+      "performance_score_weight": null,
+      "selected_for_current_package": false,
+      "human_confirmed": false,
+      "notes": ""
+    }
+  ]
+}

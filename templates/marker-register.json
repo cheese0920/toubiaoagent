@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "markers": [
+    {
+      "marker_id": "MARK-001",
+      "raw_marker": "*",
+      "display_type": "symbol",
+      "meaning": "",
+      "meaning_source": {
+        "file": "",
+        "page": "",
+        "section_path": "",
+        "original_text": ""
+      },
+      "applies_to": "",
+      "confirmed": false,
+      "confirmed_by": "",
+      "notes": ""
+    },
+    {
+      "marker_id": "MARK-002",
+      "raw_marker": "⭐",
+      "display_type": "symbol",
+      "meaning": "",
+      "meaning_source": {
+        "file": "",
+        "page": "",
+        "section_path": "",
+        "original_text": ""
+      },
+      "applies_to": "",
+      "confirmed": false,
+      "confirmed_by": "",
+      "notes": ""
+    }
+  ]
+}

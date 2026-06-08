@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "reuse_mode": "manual-curated",
+  "retrieval_note": "OpenClaw 快速验证阶段不建设真实向量库；候选片段由人工粗筛或半自动检索后登记。",
+  "fragments": [
+    {
+      "fragment_id": "FRAG-001",
+      "source_file": "",
+      "source_type": "historical_reference",
+      "source_project_name": "",
+      "source_package_name": "",
+      "section_path": "",
+      "paragraph_index": 0,
+      "chapter_type": "",
+      "original_content": "",
+      "cleaned_content": "",
+      "risk_flags": [],
+      "residue_hits": [],
+      "status": "NEEDS_CONFIRMATION",
+      "human_confirmed": false,
+      "usable_for_sections": [],
+      "notes": ""
+    }
+  ]
+}

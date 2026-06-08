@@ -1,0 +1,44 @@
+{
+  "task_id": "",
+  "title": "",
+  "owner_agent": "chapter-expander-*",
+  "source_file": "",
+  "evidence_file": "",
+  "output_file": "",
+  "review_file": "",
+  "preserve": {
+    "heading_structure": true,
+    "paragraph_order": true,
+    "paragraph_count": true,
+    "company_perspective": "我司",
+    "official_formal_style": true,
+    "core_details": true,
+    "source_references": true
+  },
+  "expansion": {
+    "target_length_ratio": 3.0,
+    "allowed_total_ratio_range": [2.7, 3.5],
+    "minimum_paragraph_ratio": 2.5,
+    "methods": [
+      "展开原文已明确的实施动作、执行步骤和协作关系",
+      "解释原文已有机制的执行方式、控制节点和成果形成过程",
+      "补强原文已有内容之间的因果、递进、并列和承接关系",
+      "围绕原文已有事实与证据增加操作性描述"
+    ]
+  },
+  "forbidden": [
+    "新增无来源事实、参数、功能、人员、业绩、时限或承诺",
+    "删除、合并、拆分或重排原有段落",
+    "改变我司视角、官样文风或核心细节",
+    "使用总结式段首或总结式段尾",
+    "使用同义反复、空泛口号或形容词堆砌凑字数"
+  ],
+  "acceptance_checks": [
+    "标题层级、段落顺序和段落数量与原文一致",
+    "全文有效字符数为原文的 2.7 至 3.5 倍",
+    "每个正文段落有效字符数不低于原段落的 2.5 倍",
+    "我司视角、官样文风、核心细节和引用完整保留",
+    "各段首尾不存在总结性话语",
+    "未引入任何新增事实或未经确认承诺"
+  ]
+}

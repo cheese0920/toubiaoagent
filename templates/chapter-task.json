@@ -1,0 +1,40 @@
+{
+  "task_id": "",
+  "title": "",
+  "owner_agent": "",
+  "chapter_plan_id": "",
+  "format_section_ids": [],
+  "format_locked_titles": [],
+  "format_source": {
+    "file": "",
+    "page": "",
+    "section_path": "",
+    "original_text": ""
+  },
+  "split_rationale": "",
+  "scoring_items": [],
+  "mandatory_requirements": [],
+  "atomic_requirement_ids": [],
+  "rejection_clause_ids": [],
+  "allowed_sources": [],
+  "allowed_rag_fragments": [
+    {
+      "fragment_id": "",
+      "status": "AVAILABLE",
+      "cleaned_content_only": true,
+      "usage": "reference_only"
+    }
+  ],
+  "excluded_content": [],
+  "required_sections": [],
+  "required_evidence": [],
+  "open_questions": [],
+  "output_file": "",
+  "acceptance_checks": [
+    "一级章节名称、顺序和层级与章节规划表一致",
+    "所有评分项均有明确响应位置",
+    "所有事实和结论均可追溯到来源",
+    "未引入未经确认的人员、业绩、时限或服务承诺",
+    "未出现其他项目或其他标包专属内容"
+  ]
+}

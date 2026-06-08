@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "marker_legend": {
+    "asterisk": {
+      "symbol": "*",
+      "meaning": "",
+      "meaning_source": "",
+      "confirmed": false
+    },
+    "star": {
+      "symbol": "⭐",
+      "meaning": "",
+      "meaning_source": "",
+      "confirmed": false
+    }
+  },
+  "records": [
+    {
+      "requirement_id": "REQ-0001",
+      "parent_clause_id": "",
+      "item_type": "technical_requirement",
+      "original_text": "",
+      "atomic_requirement": "",
+      "source": {
+        "file": "",
+        "version": "",
+        "page": "",
+        "section_path": "",
+        "table_or_attachment": ""
+      },
+      "raw_markers": [],
+      "marker_flags": {
+        "asterisk": false,
+        "star": false,
+        "rejection": false
+      },
+      "marker_meaning_confirmed": false,
+      "rejection_consequence": {
+        "trigger_condition": "",
+        "consequence_text": "",
+        "human_confirmed": false
+      },
+      "score": {
+        "score_item_id": "",
+        "points": null,
+        "gain_condition": "",
+        "deduction_condition": ""
+      },
+      "response": {
+        "required": true,
+        "primary_chapter": "",
+        "secondary_chapters": [],
+        "evidence_required": [],
+        "response_location": ""
+      },
+      "applicable_package": "",
+      "confirmation_status": "PENDING",
+      "notes": ""
+    }
+  ]
+}

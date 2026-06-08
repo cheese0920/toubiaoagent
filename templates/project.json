@@ -1,0 +1,20 @@
+{
+  "project_name": "",
+  "package_name": "",
+  "package_confirmed": false,
+  "document_format_confirmed": false,
+  "human_review_required": true,
+  "sources": {
+    "tender": [],
+    "technical_specification": [],
+    "historical_reference": [],
+    "supporting_material": []
+  },
+  "human_decisions": [],
+  "export": {
+    "draft_only": true,
+    "high_risk_open": 0,
+    "medium_risk_open": 0
+  }
+}
+

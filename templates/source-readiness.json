@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "target_package_confirmed": false,
+  "sources": [
+    {
+      "source_id": "SRC-001",
+      "file": "",
+      "source_type": "tender",
+      "source_role": "core",
+      "format": "pdf",
+      "exists": true,
+      "readability": "READABLE",
+      "text_extractable": true,
+      "table_extractable": "PARTIAL",
+      "structure_extractable": true,
+      "parse_confidence": "HIGH",
+      "contains_key_tables": true,
+      "manual_table_reviewed": false,
+      "requires_conversion": false,
+      "conversion_target": "",
+      "conversion_status": "NOT_REQUIRED",
+      "rag_eligible": false,
+      "degradation_action": "",
+      "page_or_section_scope": "",
+      "risk": "LOW",
+      "notes": ""
+    }
+  ],
+  "blocking_items": [],
+  "human_confirmations": []
+}

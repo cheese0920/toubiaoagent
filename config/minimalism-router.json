@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "principle": "Use the smallest sufficient executor. Prefer deterministic checks, templates, and bounded single-pass tasks before spawning subagents.",
+  "state_handoff": {
+    "template": "templates/workflow-state.json",
+    "mode": "compact-state-and-artifact-refs",
+    "rules": [
+      "pass artifact references instead of full documents",
+      "load references on demand",
+      "summarize tool results before handoff",
+      "send only task-authorized sources to each subagent"
+    ]
+  },
+  "levels": {
+    "L0": "Deterministic script, schema, template, or checklist. No LLM needed.",
+    "L1": "Single-pass bounded LLM transformation with fixed input/output schema.",
+    "L2": "LLM task with retrieval and evidence constraints, but no autonomous branching.",
+    "L3": "Subagent with a narrow write scope and stop conditions.",
+    "L4": "Coordinator orchestration across multiple dependent agents."
+  },
+  "stage_policy": {
+    "intake": {
+      "default_level": "L0",
+      "executor": "script-or-checklist-first",
+      "deterministic_checks": ["check-sources"],
+      "escalate_to_agent_when": [
+        "文件解析失败且需要语义判断",
+        "多项目、多标包材料混杂且无法按元数据隔离",
+        "来源版本冲突需要人工前置裁决"
+      ]
+    },
+    "requirements": {
+      "default_level": "L1",
+      "executor": "requirement-analyst with strict schema",
+      "deterministic_checks": ["check-requirements", "check-scoring-applicability"],
+      "escalate_to_agent_when": [
+        "特殊标记含义不明",
+        "废标/否决条款适用范围不明",
+        "评分条款需要跨章节解释"
+      ]
+    },
+    "planning": {
+      "default_level": "L2",
+      "executor": "chapter-planner as core scheduling node",
+      "deterministic_checks": [
+        "technical bid format sections must be locked before writer task generation",
+        "scoring items must map into format sections",
+        "atomic requirement ids must map to at least one planned section"
+      ],
+      "escalate_to_agent_when": [
+        "技术投标格式、评分项和技术规范书需要共同决定章节拆分",
+        "格式要求与评分项结构不一致，需要在格式章节内规划展开路径",
+        "高分值或大体量评分项需要拆分为多个可执行写作任务",
+        "章节任务写入范围冲突",
+        "无法在不改变招标格式章节的前提下完成评分覆盖"
+      ]
+    },
+    "drafting": {
+      "default_level": "L3",
+      "executor": "chapter-writer-*",
+      "escalate_to_agent_when": [
+        "章节任务已有明确输入、输出、证据和禁用内容"
+      ]
+    },
+    "expansion": {
+      "default_level": "L1",
+      "executor": "chapter-expander-* only for accepted draft chapters",
+      "deterministic_checks": ["check-expansion"],
+      "escalate_to_agent_when": [
+        "原段落细节不足但有可用证据可展开",
+        "需要保持官样文风和我司视角的语义扩写"
+      ]
+    },
+    "integration": {
+      "default_level": "L2",
+      "executor": "integration-editor",
+      "deterministic_checks": ["traceability exists", "all sections present"],
+      "escalate_to_agent_when": [
+        "章节间存在口径冲突",
+        "需要语义去重或衔接修复"
+      ]
+    },
+    "review": {
+      "default_level": "L0",
+      "executor": "quality gate scripts first",
+      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-expansion", "validate"],
+      "escalate_to_agent_when": [
+        "确定性检查发现问题但无法自动给出修复位置",
+        "发现项需要语义判断是否误报",
+        "整改涉及跨章节口径"
+      ]
+    },
+    "export": {
+      "default_level": "L0",
+      "executor": "scripted export only after gates pass",
+      "escalate_to_agent_when": [
+        "Word 版式异常需要人工式视觉复核说明"
+      ]
+    }
+  },
+  "anti_patterns": [
+    "为每个评分项创建独立 subagent",
+    "绕过章节规划表直接按默认章节生成 writer 任务",
+    "用评分项结构替代招标文件技术投标格式",
+    "让审查 agent 代替可执行门禁脚本",
+    "让扩写 agent 自行补事实或补承诺",
+    "在未确认标包、特殊标记、废标条款前启动正文编写",
+    "让总控 agent 直接写完整正文而不是派发有边界任务"
+  ]
+}

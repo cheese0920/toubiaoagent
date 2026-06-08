@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_name": "",
+  "format_source": {
+    "file": "",
+    "page": "",
+    "section_path": "",
+    "original_text": ""
+  },
+  "planning_principles": [
+    "一级章节结构严格依据招标文件技术投标文件格式确定",
+    "评分项作为章节内部展开和任务拆分依据",
+    "技术规范书和服务范围要求作为章节内容边界依据",
+    "不得擅自改动招标文件要求的章节名称、顺序和层级"
+  ],
+  "sections": [
+    {
+      "section_id": "SEC-001",
+      "level": 1,
+      "title": "",
+      "order": 1,
+      "source": {
+        "file": "",
+        "page": "",
+        "section_path": "",
+        "original_text": ""
+      },
+      "locked_by_tender_format": true,
+      "parent_section_id": "",
+      "mapped_scoring_item_ids": [],
+      "mapped_requirement_ids": [],
+      "mapped_technical_spec_ids": [],
+      "split_rationale": "",
+      "writing_task_ids": [],
+      "manual_confirmation_required": false,
+      "notes": ""
+    }
+  ],
+  "scoring_item_mappings": [
+    {
+      "scoring_item_id": "",
+      "score_value": 0,
+      "primary_section_id": "",
+      "supporting_section_ids": [],
+      "split_into_tasks": [],
+      "mapping_rationale": "",
+      "coverage_risk": "LOW"
+    }
+  ],
+  "technical_requirement_mappings": [
+    {
+      "requirement_id": "",
+      "primary_section_id": "",
+      "supporting_section_ids": [],
+      "mapping_rationale": ""
+    }
+  ],
+  "writing_tasks": [
+    {
+      "task_id": "TASK-001",
+      "target_section_ids": [],
+      "task_title": "",
+      "reason_for_split": "",
+      "scoring_item_ids": [],
+      "requirement_ids": [],
+      "estimated_context_size": "MEDIUM",
+      "output_file": ""
+    }
+  ],
+  "manual_confirmations": []
+}

@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "shared_rules": [
+    "只处理当前已确认标包的技术部分",
+    "事实、结论和要求必须保留来源文件、页码或章节路径",
+    "无法证实的内容必须标为待人工确认，不得自行补全",
+    "历史材料与当前项目冲突时，以当前项目为准",
+    "历史 RAG 片段不得直接进入正文生成，必须先完成去项目化、残留检测和三态准入",
+    "资料门禁不得仅根据文件扩展名阻断流程，必须按文件用途和解析可信度分级处理",
+    "subagent 交接优先使用 state/workflow-state.json、任务书路径和 artifact refs，不得默认共享完整聊天历史或整份大型材料",
+    "不得修改任务书未授权的文件"
+  ],
+  "agents": {
+    "intake-librarian": {
+      "purpose": "在资料无法确定性处理时，识别、分类、切块和索引输入材料，并补充资料可读性判断；OpenClaw 快速验证阶段对历史材料建立受控片段登记和三态准入",
+      "reads": ["project.json", "sources/**", "templates/rag-fragments.json"],
+      "writes": [
+        "inventory/source-readiness.json",
+        "inventory/source-index.json",
+        "inventory/project-whitelist.json",
+        "inventory/rag-fragments.json"
+      ],
+      "must_do": [
+        "登记每份资料的用途、source_role、解析可信度、正文/表格/条款/章节结构解析状态和降级动作",
+        "对 .doc、.docx、.pdf、扫描件、加密文件等先尝试解析或转换，不得仅因扩展名阻断流程",
+        "核心依据文件无法稳定解析时阻断自动正文生成，并提示重新上传可解析文件或进入人工摘录模式",
+        "历史技术标、既往方案和技术支撑材料解析质量较低时，仅降低引用优先级或排除出 RAG 检索范围",
+        "对历史技术标和技术支撑材料进行章节级、段落级切片",
+        "通过人工粗筛或半自动检索选择章节任务候选片段，并登记到 rag-fragments.json",
+        "对检索片段执行去项目化处理和残留信息检测",
+        "删除或替换历史项目名称、历史客户单位、历史服务周期、历史采购编号、其他标包服务内容等风险信息",
+        "片段字段仅保留来源、章节类型、原始内容、清洗后内容、风险标记和可用状态等 MVP 基础字段",
+        "将片段处理结果标记为 AVAILABLE、NEEDS_CONFIRMATION 或 DISABLED"
+      ],
+      "must_not": [
+        "建设复杂独立片段库",
+        "将未清洗历史片段放入 writer 上下文",
+        "将 NEEDS_CONFIRMATION 片段视为可用",
+        "让 DISABLED 片段进入任何正文生成任务"
+      ],
+      "must_stop_when": ["发现多个项目或标包但无法判断当前目标", "核心依据文件无法稳定解析且未进入人工摘录模式", "历史片段残留风险无法自动清洗且无人确认"]
+    },
+    "requirement-analyst": {
+      "purpose": "将招标要求和评分项逐条拆成可独立核验的原子要点，原样记录 *、⭐、废标/否决标记，并建立响应映射",
+      "reads": ["project.json", "inventory/**"],
+      "writes": [
+        "requirements/atomic-requirements.json",
+        "requirements/marker-register.json",
+        "requirements/rejection-clauses.json",
+        "requirements/scoring-applicability.json",
+        "requirements/scoring-map.json",
+        "requirements/mandatory-requirements.json",
+        "requirements/format-rules.json",
+        "requirements/exclusion-list.json"
+      ],
+      "must_do": [
+        "每个可独立判断是否响应的要求单独形成一条记录，不得将多个条件合并为一个要点",
+        "保留要求原文、来源文件、页码、章节路径和上级条款编号",
+        "原样记录 *、⭐、加粗、下划线、醒目色及废标、否决、无效投标等标记",
+        "将评分项继续拆成逐条得分条件、扣分条件、证明材料要求和响应位置",
+        "每组评分标准必须记录其适用标包原文，明确是否适用于当前标包",
+        "明确每个原子要点的适用标包、责任章节、证据要求和确认状态"
+      ],
+      "must_not": [
+        "仅凭 * 或 ⭐ 自动判断其法律或评审含义",
+        "遗漏表格、脚注、附件、图片或格式说明中的要求",
+        "把废标或否决条款降级为一般提醒",
+        "用摘要替代要求原文"
+      ],
+      "must_stop_when": ["当前标包未确认", "评分办法或技术规范缺失", "标包边界存在冲突", "* 或 ⭐ 的含义无法从文件中确认", "发现废标/否决条款但适用条件不明确"]
+    },
+    "chapter-planner": {
+      "purpose": "在当前标包技术上下文下进行章节规划：先依据招标文件技术投标文件格式确定一级章节结构，再结合技术评分项、技术规范书和服务范围要求进行二级或三级拆分，并生成可执行写作任务",
+      "reads": ["requirements/**", "inventory/source-index.json", "templates/chapter-plan.json", "templates/chapter-task.json"],
+      "writes": [
+        "planning/chapter-plan.json",
+        "planning/scoring-section-map.json",
+        "planning/technical-requirement-section-map.json",
+        "tasks/chapter-task-*.json"
+      ],
+      "must_do": [
+        "严格依据招标文件中的技术投标文件格式确定一级章节名称、顺序和层级",
+        "当格式要求与评分项结构不一致时，以投标文件格式为一级框架，以评分项作为章节内部展开依据",
+        "结合技术评分项分值、评分内容体量、技术规范书和服务范围要求，对章节进行二级或三级拆分",
+        "对分值较高、内容范围较大的评分项，在对应格式章节下拆分为多个可执行写作任务",
+        "输出章节规划表、评分项映射关系、技术要求映射关系、章节拆分依据和人工确认事项",
+        "为每个写作任务明确目标格式章节、覆盖评分项、覆盖原子要点、允许来源、禁用内容和输出文件",
+        "为写作任务仅分配 AVAILABLE 或已人工确认的 NEEDS_CONFIRMATION 历史 RAG 片段"
+      ],
+      "must_not": [
+        "直接生成正文",
+        "按默认章节或历史模板擅自生成一级章节",
+        "按单个评分项机械生成 writer 任务",
+        "改动招标文件要求的章节名称、顺序或层级",
+        "将评分项结构凌驾于技术投标文件格式之上"
+      ],
+      "must_stop_when": ["技术投标文件格式无法定位", "格式要求与评分项结构冲突且无法在格式章节内展开", "评分项无法映射到任何格式章节", "任务之间存在明显写入冲突"]
+    },
+    "chapter-writer-*": {
+      "purpose": "依据单个章节任务书编写响应正文并维护证据清单",
+      "reads": ["tasks/<assigned-task>.json", "任务书允许的来源材料"],
+      "writes": ["chapters/<assigned-chapter>.md", "evidence/<assigned-chapter>.json"],
+      "must_do": [
+        "仅使用任务书允许的当前项目材料和已清洗历史 RAG 片段",
+        "历史片段只能作为表达、方法和结构参考，不能替代当前项目要求和技术规范",
+        "引用历史片段形成正文前，应再次检查清洗后内容是否存在历史项目、客户、周期、采购编号或其他标包残留",
+        "NEEDS_CONFIRMATION 片段必须已有人工作出可用确认后才能使用"
+      ],
+      "must_not": [
+        "读取或使用未清洗的 original_content 作为正文依据",
+        "使用 DISABLED 历史片段",
+        "将历史项目事实、人员、业绩、周期或承诺迁移到当前正文"
+      ],
+      "must_stop_when": ["任务书要求编造事实或承诺", "必要证据缺失", "发现其他标包污染", "任务书包含未确认或禁用历史片段"]
+    },
+    "chapter-expander-*": {
+      "purpose": "严格遵循原有分段结构，将章节正文扩写至原文约 3 倍，同时完整保留官样文风、我司视角、核心细节和引用",
+      "reads": ["tasks/<assigned-expansion-task>.json", "chapters/<assigned-chapter>.md", "evidence/<assigned-chapter>.json"],
+      "writes": ["expanded/<assigned-chapter>.md", "reviews/expansion-<assigned-chapter>.json"],
+      "must_preserve": [
+        "全部标题及标题层级",
+        "原有分段顺序与段落数量",
+        "我司视角和正式官样文风",
+        "全部核心事实、参数、约束、承诺边界与证据引用",
+        "段落之间的因果、递进、并列和承接关系"
+      ],
+      "must_not": [
+        "新增未经来源支持的事实、功能、人员、业绩、时限或承诺",
+        "删除、合并、拆分、重排原有段落",
+        "将我司视角改为第三方、采购人或泛化视角",
+        "在段首使用概括、总结或结论性引导语",
+        "在段尾使用综上、总之、由此可见等总结性收束语",
+        "通过同义反复、空泛口号或堆砌形容词凑字数"
+      ],
+      "acceptance": {
+        "target_length_ratio": 3.0,
+        "allowed_total_ratio_range": [2.7, 3.5],
+        "minimum_paragraph_ratio": 2.5,
+        "structure_must_match": true,
+        "new_claims_allowed": false
+      },
+      "must_stop_when": ["原文结构无法识别", "原文存在事实或承诺冲突", "扩写所需细节无来源支持", "无法在不新增事实的前提下达到最低扩写比例"]
+    },
+    "integration-editor": {
+      "purpose": "合并扩写后的章节、统一术语和承诺口径、去除重复",
+      "reads": ["expanded/**", "evidence/**", "requirements/**"],
+      "writes": ["merged/technical-bid-draft.md", "merged/traceability.json"],
+      "must_stop_when": ["章节间存在无法裁决的技术冲突", "引用无法回溯"]
+    },
+    "compliance-reviewer": {
+      "purpose": "检查评分覆盖、强制条款和技术偏差一致性",
+      "reads": ["merged/**", "requirements/**"],
+      "writes": ["reviews/compliance.json"],
+      "must_stop_when": ["发现高风险合规问题"]
+    },
+    "residue-reviewer": {
+      "purpose": "检查跨标包污染、历史残留和未经确认承诺",
+      "reads": ["merged/**", "requirements/exclusion-list.json", "inventory/project-whitelist.json"],
+      "writes": ["reviews/residue.json"],
+      "must_stop_when": ["发现其他项目核心信息残留", "发现未经证实的强承诺"]
+    },
+    "format-reviewer": {
+      "purpose": "检查目录、编号、表格、附件和格式完整性",
+      "reads": ["merged/**", "requirements/format-rules.json"],
+      "writes": ["reviews/format.json"],
+      "must_stop_when": ["格式要求缺失或存在不可解析冲突"]
+    },
+    "exporter": {
+      "purpose": "仅在门禁通过后生成带初稿标记的 Word 文件",
+      "reads": ["merged/**", "reviews/**", "project.json"],
+      "writes": ["output/技术投标文件-初稿.docx"],
+      "must_stop_when": ["任何高风险问题未关闭", "技术偏差未人工确认", "draft_only 不是 true"]
+    }
+  }
+}
