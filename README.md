@@ -38,7 +38,14 @@ python scripts/bidflow.py init "项目名称" --package "标包名称"
 
 2. 将招标文件、技术规范书、历史参考和支撑材料放入生成的 `projects/<项目>/sources/` 对应目录。OpenClaw 快速验证阶段的知识管理规则放在 `technical-bid-authoring` skill 的 `references/knowledge-management.md` 下；历史材料采用人工粗筛、章节/段落片段登记、去项目化清洗、三态准入的受控复用方式，不单独建设复杂片段库或系统级知识库。
 
-3. 编辑项目目录中的 `project.json`，补充材料和人工确认项，并建立 `inventory/source-readiness.json`。系统按文件用途和解析可信度分级处理：技术规范书、评分细则、技术投标格式等核心依据不可稳定解析时阻断正文生成；历史技术标、既往方案和支撑材料解析质量较低时只降低引用优先级或排除出 RAG。
+3. 编辑项目目录中的 `project.json`，补充材料和人工确认项，然后解析入库资料。`ingest-sources` 会读取 `sources/` 下的 PDF、DOCX、XLSX、TXT/MD，生成 `inventory/source-index.json` 和 `inventory/source-readiness.json`。PDF/DOCX/TXT 会尽量记录页码或章节路径，DOCX/XLSX 表格会记录表格位置；普通 PDF 表格暂不假定可稳定抽取，核心依据中的关键表格需要人工复核。
+
+```powershell
+python scripts/bidflow.py ingest-sources "projects/<项目目录>" `
+  --report "projects/<项目目录>/reviews/ingest-sources.json"
+```
+
+系统按文件用途和解析可信度分级处理：技术规范书、评分细则、技术投标格式等核心依据不可稳定解析时阻断正文生成；历史技术标、既往方案和支撑材料解析质量较低时只降低引用优先级或排除出 RAG。
 
 ```powershell
 python scripts/bidflow.py check-sources "projects/<项目目录>/inventory/source-readiness.json"
@@ -51,6 +58,15 @@ python scripts/bidflow.py plan "projects/<项目目录>"
 ```
 
 5. 检查逐条拆解的要求、标记和废标/否决条款：
+
+如果要求拆解由 `requirement-analyst` 或外部 LLM 先产出为一个汇总 JSON，可先用 `shred-rfp` 将其落盘为标准台账并立即复用门禁校验：
+
+```powershell
+python scripts/bidflow.py shred-rfp `
+  "projects/<项目目录>" `
+  "projects/<项目目录>/requirements/shred-rfp.json" `
+  --report "projects/<项目目录>/reviews/shred-rfp.json"
+```
 
 ```powershell
 python scripts/bidflow.py check-requirements "projects/<项目目录>/requirements/atomic-requirements.json"
@@ -73,10 +89,21 @@ python scripts/bidflow.py check-scoring-applicability `
   --package "标包名称"
 ```
 
-6. 按阶段运行门禁检查：
+6. 章节规划完成后，先检查章节、评分项、原子要点和写作任务是否闭环，再派发 writer：
+
+```powershell
+python scripts/bidflow.py check-plan `
+  "projects/<项目目录>/planning/chapter-plan.json" `
+  --requirements "projects/<项目目录>/requirements/atomic-requirements.json" `
+  --scoring-map "projects/<项目目录>/requirements/scoring-map.json" `
+  --report "projects/<项目目录>/reviews/plan-check.json"
+```
+
+7. 按阶段运行门禁检查：
 
 ```powershell
 python scripts/bidflow.py validate "projects/<项目目录>" --stage requirements
+python scripts/bidflow.py validate "projects/<项目目录>" --stage planning
 python scripts/bidflow.py validate "projects/<项目目录>" --stage export
 ```
 
@@ -103,13 +130,16 @@ python scripts/bidflow.py check-expansion "原章节.md" "扩写章节.md" --rep
 - `project.json`：当前项目、标包、材料和人工确认状态。
 - `state/workflow-state.json`：紧凑状态交接对象，只传项目状态、阶段、门禁和 artifact refs。
 - `inventory/source-readiness.json`：材料可读性、抽取状态、转换状态和核心资料阻断项。
+- `inventory/source-index.json`：资料解析索引，记录文本片段、页码、章节路径、段落序号和表格位置。
 - `inventory/rag-fragments.json`：OpenClaw 快速验证阶段的历史材料候选片段、清洗后内容、风险标记和 `AVAILABLE`/`NEEDS_CONFIRMATION`/`DISABLED` 状态。
 - `requirements/scoring-applicability.json`：多组评分标准的适用标包范围、当前标包选中组和人工确认状态。
 - `requirements/scoring-map.json`：评分项到响应章节的映射。
+- `requirements/shred-rfp.json`：可选的 RFP/招标文件拆解汇总输入，用 `shred-rfp` 落盘为标准台账。
 - `requirements/atomic-requirements.json`：逐条原子要点台账，保留原文、来源、`*`、`⭐` 和废标/否决标记。
 - `requirements/marker-register.json`：特殊标记及其文件内定义、确认状态。
 - `requirements/rejection-clauses.json`：废标、否决、无效投标等阻断条款清单。
 - `planning/chapter-plan.json`：章节规划表，锁定格式章节、评分项映射、技术要求映射和拆分依据。
+- `reviews/plan-check.json`：规划覆盖检查结果，进入 writer 前必须处理阻断项。
 - `templates/atomic-requirements.json`：逐条要点记录模板。
 - `templates/marker-register.json`：`*`、`⭐` 等标记释义确认模板。
 - `templates/rejection-clauses.json`：废标/否决条款汇总模板。

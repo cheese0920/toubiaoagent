@@ -69,6 +69,77 @@ class BidflowTests(unittest.TestCase):
             ]
         }
 
+    def valid_requirements(self):
+        return {
+            "records": [
+                {
+                    "requirement_id": "REQ-0001",
+                    "item_type": "technical_requirement",
+                    "original_text": "投标人应提供实施方案。",
+                    "atomic_requirement": "提供实施方案",
+                    "source": {"file": "招标文件.pdf", "page": "12", "section_path": "第三章"},
+                    "raw_markers": [],
+                    "marker_flags": {"asterisk": False, "star": False, "rejection": False},
+                    "response": {"required": True, "primary_chapter": "实施方案"},
+                    "applicable_package": "标包A",
+                    "score": {"score_item_id": "SCI-001"},
+                }
+            ]
+        }
+
+    def valid_chapter_plan(self):
+        return {
+            "sections": [
+                {
+                    "section_id": "SEC-001",
+                    "level": 1,
+                    "title": "实施方案",
+                    "order": 1,
+                    "source": {
+                        "file": "招标文件.pdf",
+                        "page": "20",
+                        "section_path": "技术投标文件格式",
+                        "original_text": "一、实施方案",
+                    },
+                    "locked_by_tender_format": True,
+                    "mapped_scoring_item_ids": ["SCI-001"],
+                    "mapped_requirement_ids": ["REQ-0001"],
+                    "writing_task_ids": ["TASK-001"],
+                }
+            ],
+            "scoring_item_mappings": [
+                {
+                    "scoring_item_id": "SCI-001",
+                    "score_value": 10,
+                    "primary_section_id": "SEC-001",
+                    "supporting_section_ids": [],
+                    "split_into_tasks": ["TASK-001"],
+                    "mapping_rationale": "按格式章节响应实施方案评分项",
+                    "coverage_risk": "LOW",
+                }
+            ],
+            "technical_requirement_mappings": [
+                {
+                    "requirement_id": "REQ-0001",
+                    "primary_section_id": "SEC-001",
+                    "supporting_section_ids": [],
+                    "mapping_rationale": "实施方案章节直接响应",
+                }
+            ],
+            "writing_tasks": [
+                {
+                    "task_id": "TASK-001",
+                    "target_section_ids": ["SEC-001"],
+                    "task_title": "实施方案",
+                    "reason_for_split": "单章独立写作",
+                    "scoring_item_ids": ["SCI-001"],
+                    "requirement_ids": ["REQ-0001"],
+                    "output_file": "chapters/implementation.md",
+                }
+            ],
+            "manual_confirmations": [],
+        }
+
     def test_slugify_removes_windows_invalid_characters(self):
         self.assertEqual(bidflow.slugify('A/B:C*D?'), "A-B-C-D-")
 
@@ -271,6 +342,55 @@ class BidflowTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "REJECT")
 
+    def test_ingest_sources_writes_index_and_readiness_for_text_sources(self):
+        with tempfile.TemporaryDirectory() as temp:
+            project_dir = Path(temp)
+            (project_dir / "sources" / "tender").mkdir(parents=True)
+            (project_dir / "sources" / "technical-specification").mkdir(parents=True)
+            (project_dir / "sources" / "tender" / "tender.txt").write_text("第一章 招标要求\n\n投标人应提供方案。", encoding="utf-8")
+            (project_dir / "sources" / "technical-specification" / "spec.txt").write_text("一、技术规范\n\n满足系统建设要求。", encoding="utf-8")
+            project = bidflow.load_json(bidflow.PROJECT_TEMPLATE)
+            project.update({"project_name": "测试项目", "package_name": "标包A", "package_confirmed": True})
+            bidflow.write_json(project_dir / "project.json", project)
+
+            report = bidflow.ingest_sources(project_dir)
+
+            self.assertEqual(report["status"], "PASS")
+            self.assertEqual(report["source_count"], 2)
+            self.assertGreaterEqual(report["fragment_count"], 2)
+            readiness = bidflow.load_json(project_dir / "inventory" / "source-readiness.json")
+            source_index = bidflow.load_json(project_dir / "inventory" / "source-index.json")
+            self.assertEqual(len(readiness["sources"]), 2)
+            self.assertTrue(any(item["source_type"] == "tender" for item in readiness["sources"]))
+            self.assertTrue(any(fragment["location"].get("section_path") for fragment in source_index["fragments"]))
+
+    def test_ingest_sources_records_xlsx_table_location(self):
+        openpyxl = bidflow.try_import("openpyxl")
+        if openpyxl is None:
+            self.skipTest("openpyxl not installed")
+        with tempfile.TemporaryDirectory() as temp:
+            project_dir = Path(temp)
+            (project_dir / "sources" / "technical-specification").mkdir(parents=True)
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "评分表"
+            sheet.append(["评分项", "分值"])
+            sheet.append(["实施方案", 10])
+            workbook.save(project_dir / "sources" / "technical-specification" / "score.xlsx")
+            project = bidflow.load_json(bidflow.PROJECT_TEMPLATE)
+            project.update({"project_name": "测试项目", "package_name": "标包A", "package_confirmed": True})
+            project["sources"]["tender"] = ["sources/technical-specification/score.xlsx"]
+            project["sources"]["technical_specification"] = ["sources/technical-specification/score.xlsx"]
+            bidflow.write_json(project_dir / "project.json", project)
+
+            report = bidflow.ingest_sources(project_dir)
+
+            self.assertEqual(report["status"], "PASS")
+            source_index = bidflow.load_json(project_dir / "inventory" / "source-index.json")
+            table_fragments = [fragment for fragment in source_index["fragments"] if fragment["kind"] == "table"]
+            self.assertTrue(table_fragments)
+            self.assertEqual(table_fragments[0]["location"]["table"]["sheet"], "评分表")
+
     def test_scoring_applicability_requires_one_confirmed_matching_group(self):
         report = bidflow.validate_scoring_applicability(
             self.valid_scoring_applicability("package-1"),
@@ -318,6 +438,63 @@ class BidflowTests(unittest.TestCase):
 
         self.assertEqual(wrong_report["status"], "REJECT")
         self.assertEqual(duplicate_report["status"], "REJECT")
+
+    def test_validate_chapter_plan_accepts_covered_requirements_and_scoring(self):
+        report = bidflow.validate_chapter_plan(
+            self.valid_chapter_plan(),
+            self.valid_requirements(),
+            {"items": [{"scoring_item_id": "SCI-001"}]},
+        )
+
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["mapped_requirement_count"], 1)
+        self.assertEqual(report["mapped_scoring_item_count"], 1)
+
+    def test_validate_chapter_plan_blocks_missing_mandatory_mapping(self):
+        plan = self.valid_chapter_plan()
+        plan["sections"][0]["mapped_requirement_ids"] = []
+        plan["technical_requirement_mappings"] = []
+        plan["writing_tasks"][0]["requirement_ids"] = []
+
+        report = bidflow.validate_chapter_plan(plan, self.valid_requirements(), {})
+
+        self.assertEqual(report["status"], "REJECT")
+        self.assertTrue(any("强制/必答原子要点未映射" in item["message"] for item in report["findings"]))
+
+    def test_shred_rfp_writes_outputs_and_reuses_requirement_gates(self):
+        with tempfile.TemporaryDirectory() as temp:
+            project_dir = Path(temp)
+            shred_file = project_dir / "shred.json"
+            marker_register = {
+                "markers": [
+                    {
+                        "marker_id": "MARK-001",
+                        "raw_marker": "*",
+                        "meaning": "重要条款",
+                        "meaning_source": {"file": "招标文件.pdf", "original_text": "* 表示重要条款"},
+                        "confirmed": True,
+                    }
+                ]
+            }
+            rejection_clauses = {"clauses": []}
+            bidflow.write_json(
+                shred_file,
+                {
+                    "outputs": {
+                        "atomic_requirements": self.valid_requirements(),
+                        "marker_register": marker_register,
+                        "rejection_clauses": rejection_clauses,
+                        "scoring_map": {"items": [{"scoring_item_id": "SCI-001"}]},
+                        "exclusion_list": {"items": []},
+                    }
+                },
+            )
+
+            report = bidflow.shred_rfp(project_dir, shred_file)
+
+            self.assertEqual(report["status"], "PASS")
+            self.assertTrue((project_dir / "requirements" / "atomic-requirements.json").exists())
+            self.assertTrue((project_dir / "requirements" / "scoring-map.json").exists())
 
     def test_validate_expansion_accepts_utf8_bom_before_heading(self):
         source = "\ufeff# 标题\n\n我司依据既定要求开展检查，逐项记录发现事项。"

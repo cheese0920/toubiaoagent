@@ -6,6 +6,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +105,98 @@ def is_positive(value: object) -> bool:
     if isinstance(value, bool):
         return value
     return str(value or "").strip().upper() in {"TRUE", "YES", "Y", "DONE", "READABLE", "FULL", "PARTIAL"}
+
+
+def try_import(module_name: str) -> Any | None:
+    try:
+        module = __import__(module_name)
+    except ImportError:
+        return None
+    return module
+
+
+def normalize_source_type(value: str) -> str:
+    normalized = normalize_label(value).replace("technicalspecification", "technical_specification")
+    aliases = {
+        "tender": "tender",
+        "招标文件": "tender",
+        "technical_specification": "technical_specification",
+        "technicalspecification": "technical_specification",
+        "技术规范书": "technical_specification",
+        "historicalreference": "historical_reference",
+        "historical_reference": "historical_reference",
+        "历史参考": "historical_reference",
+        "supportingmaterial": "supporting_material",
+        "supporting_material": "supporting_material",
+        "支撑材料": "supporting_material",
+        "technicalscoring": "technical_scoring",
+        "scoringrules": "scoring_rules",
+        "formatrules": "format_rules",
+        "technicalbidformat": "technical_bid_format",
+    }
+    return aliases.get(normalized, normalized or "supporting_material")
+
+
+def infer_source_type(path: Path, project_dir: Path) -> str:
+    try:
+        parts = [part.lower() for part in path.relative_to(project_dir).parts]
+    except ValueError:
+        parts = [part.lower() for part in path.parts]
+    joined = "/".join(parts)
+    if "technical-specification" in joined or "technical_specification" in joined:
+        return "technical_specification"
+    if "historical-reference" in joined or "historical_reference" in joined:
+        return "historical_reference"
+    if "supporting-material" in joined or "supporting_material" in joined:
+        return "supporting_material"
+    if "technical-scoring" in joined or "scoring" in joined:
+        return "technical_scoring"
+    if "format" in joined:
+        return "format_rules"
+    if "tender" in joined:
+        return "tender"
+    return "supporting_material"
+
+
+def source_role_for_type(source_type: str) -> str:
+    return "core" if source_type in {
+        "tender",
+        "technical_specification",
+        "technical_scoring",
+        "scoring_rules",
+        "technical_bid_format",
+        "format_rules",
+    } else "reference"
+
+
+def source_group_for_type(source_type: str) -> str:
+    if source_type == "technical_specification":
+        return "technical_specification"
+    if source_type == "tender":
+        return "tender"
+    if source_type == "historical_reference":
+        return "historical_reference"
+    return "supporting_material"
+
+
+def heading_level(text: str) -> int | None:
+    stripped = text.strip()
+    if not stripped:
+        return None
+    patterns = [
+        (1, r"^(第[一二三四五六七八九十百]+[章节篇部分])"),
+        (1, r"^[一二三四五六七八九十]+[、.．]\s*"),
+        (2, r"^（[一二三四五六七八九十]+）"),
+        (2, r"^\([一二三四五六七八九十]+\)"),
+        (2, r"^\d+[、.．]\s*"),
+        (3, r"^\d+\.\d+"),
+    ]
+    for level, pattern in patterns:
+        if re.match(pattern, stripped):
+            return level
+    if len(stripped) <= 40 and not re.search(r"[。！？!?；;]$", stripped):
+        return 2
+    return None
 
 
 def validate_expansion(source: str, expanded: str) -> dict:
@@ -515,6 +608,432 @@ def validate_source_readiness(data: dict) -> dict:
     }
 
 
+def update_section_stack(stack: list[str], text: str) -> list[str]:
+    level = heading_level(text)
+    if level is None:
+        return stack
+    next_stack = stack[: max(level - 1, 0)]
+    next_stack.append(text.strip())
+    return next_stack
+
+
+def make_fragment(
+    source_id: str,
+    fragment_id: str,
+    text: str,
+    page: int | None = None,
+    section_path: list[str] | None = None,
+    paragraph_index: int | None = None,
+    table: dict | None = None,
+) -> dict:
+    location: dict[str, object] = {}
+    if page is not None:
+        location["page"] = page
+    if section_path:
+        location["section_path"] = " > ".join(section_path)
+    if paragraph_index is not None:
+        location["paragraph_index"] = paragraph_index
+    if table:
+        location["table"] = table
+    return {
+        "fragment_id": fragment_id,
+        "source_id": source_id,
+        "kind": "table" if table else "text",
+        "location": location,
+        "text": text.strip(),
+        "char_count": len(text.strip()),
+    }
+
+
+def parse_pdf(path: Path, source_id: str) -> tuple[list[dict], dict]:
+    pypdf = try_import("pypdf")
+    if pypdf is None:
+        return [], {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "requires_conversion": True,
+            "conversion_target": "txt",
+            "conversion_status": "PENDING",
+            "notes": "缺少 pypdf，无法解析 PDF",
+        }
+
+    fragments: list[dict] = []
+    section_stack: list[str] = []
+    page_count = 0
+    text_pages = 0
+    try:
+        reader = pypdf.PdfReader(str(path))
+        page_count = len(reader.pages)
+        for page_number, page in enumerate(reader.pages, start=1):
+            text = page.extract_text() or ""
+            if text.strip():
+                text_pages += 1
+            blocks = [block.strip() for block in re.split(r"\n\s*\n|\r\n\s*\r\n", text) if block.strip()]
+            if not blocks:
+                blocks = [line.strip() for line in text.splitlines() if line.strip()]
+            for index, block in enumerate(blocks, start=1):
+                section_stack = update_section_stack(section_stack, block)
+                fragments.append(
+                    make_fragment(
+                        source_id,
+                        f"{source_id}-P{page_number:03d}-{index:03d}",
+                        block,
+                        page=page_number,
+                        section_path=section_stack,
+                        paragraph_index=index,
+                    )
+                )
+    except Exception as exc:
+        return [], {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "requires_conversion": True,
+            "conversion_target": "manual-excerpt",
+            "conversion_status": "PENDING",
+            "notes": f"PDF 解析失败：{exc}",
+        }
+
+    text_extractable = bool(fragments)
+    return fragments, {
+        "readability": "READABLE" if text_extractable else "UNREADABLE",
+        "text_extractable": text_extractable,
+        "table_extractable": False,
+        "structure_extractable": text_extractable,
+        "parse_confidence": "HIGH" if page_count and text_pages / max(page_count, 1) >= 0.8 else "LOW",
+        "requires_conversion": not text_extractable,
+        "conversion_target": "" if text_extractable else "manual-excerpt",
+        "conversion_status": "NOT_REQUIRED" if text_extractable else "PENDING",
+        "page_count": page_count,
+        "notes": "PDF 表格未做稳定抽取，关键表格需人工复核",
+    }
+
+
+def parse_docx(path: Path, source_id: str) -> tuple[list[dict], dict]:
+    docx = try_import("docx")
+    if docx is None:
+        return [], {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "requires_conversion": True,
+            "conversion_target": "txt",
+            "conversion_status": "PENDING",
+            "notes": "缺少 python-docx，无法解析 DOCX",
+        }
+
+    fragments: list[dict] = []
+    section_stack: list[str] = []
+    table_count = 0
+    try:
+        document = docx.Document(str(path))
+        for index, paragraph in enumerate(document.paragraphs, start=1):
+            text = paragraph.text.strip()
+            if not text:
+                continue
+            section_stack = update_section_stack(section_stack, text)
+            fragments.append(make_fragment(source_id, f"{source_id}-PARA-{index:04d}", text, section_path=section_stack, paragraph_index=index))
+        for table_index, table in enumerate(document.tables, start=1):
+            rows = []
+            for row in table.rows:
+                values = [cell.text.strip() for cell in row.cells]
+                if any(values):
+                    rows.append(values)
+            if not rows:
+                continue
+            table_count += 1
+            text = "\n".join(" | ".join(row) for row in rows)
+            fragments.append(
+                make_fragment(
+                    source_id,
+                    f"{source_id}-TABLE-{table_index:03d}",
+                    text,
+                    section_path=section_stack,
+                    table={"table_index": table_index, "row_count": len(rows), "column_count": max(len(row) for row in rows)},
+                )
+            )
+    except Exception as exc:
+        return [], {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "requires_conversion": True,
+            "conversion_target": "manual-excerpt",
+            "conversion_status": "PENDING",
+            "notes": f"DOCX 解析失败：{exc}",
+        }
+
+    text_extractable = bool(fragments)
+    return fragments, {
+        "readability": "READABLE" if text_extractable else "UNREADABLE",
+        "text_extractable": text_extractable,
+        "table_extractable": bool(table_count),
+        "structure_extractable": text_extractable,
+        "parse_confidence": "HIGH" if text_extractable else "LOW",
+        "contains_key_tables": bool(table_count),
+        "requires_conversion": False,
+        "conversion_target": "",
+        "conversion_status": "NOT_REQUIRED",
+        "table_count": table_count,
+        "notes": "",
+    }
+
+
+def parse_xlsx(path: Path, source_id: str) -> tuple[list[dict], dict]:
+    openpyxl = try_import("openpyxl")
+    if openpyxl is None:
+        return [], {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "requires_conversion": True,
+            "conversion_target": "csv",
+            "conversion_status": "PENDING",
+            "notes": "缺少 openpyxl，无法解析 XLSX",
+        }
+
+    fragments: list[dict] = []
+    sheet_count = 0
+    try:
+        workbook = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        try:
+            sheet_count = len(workbook.worksheets)
+            for sheet in workbook.worksheets:
+                rows = []
+                for row in sheet.iter_rows(values_only=True):
+                    values = ["" if value is None else str(value).strip() for value in row]
+                    if any(values):
+                        rows.append(values)
+                if not rows:
+                    continue
+                text = "\n".join(" | ".join(row) for row in rows)
+                fragments.append(
+                    make_fragment(
+                        source_id,
+                        f"{source_id}-SHEET-{slugify(sheet.title)}",
+                        text,
+                        table={
+                            "sheet": sheet.title,
+                            "range": sheet.calculate_dimension(),
+                            "row_count": len(rows),
+                            "column_count": max(len(row) for row in rows),
+                        },
+                    )
+                )
+        finally:
+            workbook.close()
+    except Exception as exc:
+        return [], {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "requires_conversion": True,
+            "conversion_target": "manual-excerpt",
+            "conversion_status": "PENDING",
+            "notes": f"XLSX 解析失败：{exc}",
+        }
+
+    table_extractable = bool(fragments)
+    return fragments, {
+        "readability": "READABLE" if table_extractable else "UNREADABLE",
+        "text_extractable": table_extractable,
+        "table_extractable": table_extractable,
+        "structure_extractable": table_extractable,
+        "parse_confidence": "HIGH" if table_extractable else "LOW",
+        "contains_key_tables": table_extractable,
+        "requires_conversion": False,
+        "conversion_target": "",
+        "conversion_status": "NOT_REQUIRED",
+        "sheet_count": sheet_count,
+        "notes": "",
+    }
+
+
+def parse_source_file(path: Path, source_id: str) -> tuple[list[dict], dict]:
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        return parse_pdf(path, source_id)
+    if suffix == ".docx":
+        return parse_docx(path, source_id)
+    if suffix in {".xlsx", ".xlsm"}:
+        return parse_xlsx(path, source_id)
+    if suffix in {".txt", ".md"}:
+        text = path.read_text(encoding="utf-8-sig", errors="replace")
+        fragments = []
+        section_stack: list[str] = []
+        for index, block in enumerate(markdown_blocks(text), start=1):
+            section_stack = update_section_stack(section_stack, block)
+            fragments.append(make_fragment(source_id, f"{source_id}-TEXT-{index:04d}", block, section_path=section_stack, paragraph_index=index))
+        return fragments, {
+            "readability": "READABLE" if fragments else "UNREADABLE",
+            "text_extractable": bool(fragments),
+            "table_extractable": False,
+            "structure_extractable": bool(fragments),
+            "parse_confidence": "HIGH" if fragments else "LOW",
+            "requires_conversion": False,
+            "conversion_target": "",
+            "conversion_status": "NOT_REQUIRED",
+            "notes": "",
+        }
+    return [], {
+        "readability": "UNREADABLE",
+        "text_extractable": False,
+        "table_extractable": False,
+        "structure_extractable": False,
+        "parse_confidence": "FAILED",
+        "requires_conversion": True,
+        "conversion_target": "pdf/docx/xlsx/txt",
+        "conversion_status": "PENDING",
+        "notes": f"暂不支持的文件格式：{suffix or '无扩展名'}",
+    }
+
+
+def iter_project_sources(project_dir: Path, project: dict) -> list[tuple[Path, str]]:
+    sources_root = project_dir / "sources"
+    entries: list[tuple[Path, str]] = []
+    for group, files in project.get("sources", {}).items():
+        source_type = normalize_source_type(group)
+        if not isinstance(files, list):
+            continue
+        for item in files:
+            if not str(item).strip():
+                continue
+            raw_path = Path(str(item))
+            path = raw_path if raw_path.is_absolute() else project_dir / raw_path
+            entries.append((path, source_type))
+    if entries:
+        return entries
+    if not sources_root.exists():
+        return []
+    for path in sorted(sources_root.rglob("*")):
+        if path.is_file():
+            entries.append((path, infer_source_type(path, project_dir)))
+    return entries
+
+
+def ingest_sources(project_dir: Path) -> dict:
+    project_path = project_dir / "project.json"
+    project = load_json(project_path) if project_path.exists() else {"project_name": project_dir.name, "package_name": "", "sources": {}}
+    entries = iter_project_sources(project_dir, project)
+    sources: list[dict] = []
+    fragments: list[dict] = []
+    registered_sources: dict[str, list[str]] = {"tender": [], "technical_specification": [], "historical_reference": [], "supporting_material": []}
+
+    for index, (path, source_type) in enumerate(entries, start=1):
+        source_id = f"SRC-{index:03d}"
+        exists = path.exists()
+        file_format = path.suffix.lower().lstrip(".") or "unknown"
+        source_role = source_role_for_type(source_type)
+        parse_meta = {
+            "readability": "UNREADABLE",
+            "text_extractable": False,
+            "table_extractable": False,
+            "structure_extractable": False,
+            "parse_confidence": "FAILED",
+            "contains_key_tables": False,
+            "manual_table_reviewed": False,
+            "requires_conversion": True,
+            "conversion_target": "manual-excerpt",
+            "conversion_status": "PENDING",
+            "notes": "来源文件不存在",
+        }
+        parsed_fragments: list[dict] = []
+        if exists:
+            parsed_fragments, parse_meta = parse_source_file(path, source_id)
+        contains_key_tables = bool(parse_meta.get("contains_key_tables")) or file_format in {"xlsx", "xlsm"}
+        if file_format == "pdf" and source_role == "core":
+            contains_key_tables = True
+        source_record = {
+            "source_id": source_id,
+            "file": str(path.relative_to(project_dir)) if path.is_absolute() and path.exists() else str(path),
+            "source_type": source_type,
+            "source_role": source_role,
+            "format": file_format,
+            "exists": exists,
+            "readability": parse_meta.get("readability", "UNREADABLE"),
+            "text_extractable": parse_meta.get("text_extractable", False),
+            "table_extractable": parse_meta.get("table_extractable", False),
+            "structure_extractable": parse_meta.get("structure_extractable", False),
+            "parse_confidence": parse_meta.get("parse_confidence", "FAILED"),
+            "contains_key_tables": contains_key_tables,
+            "manual_table_reviewed": False,
+            "requires_conversion": parse_meta.get("requires_conversion", False),
+            "conversion_target": parse_meta.get("conversion_target", ""),
+            "conversion_status": parse_meta.get("conversion_status", "NOT_REQUIRED"),
+            "rag_eligible": source_role != "core" and parse_meta.get("text_extractable") is True,
+            "degradation_action": "" if source_role == "core" else "低可信时排除出 RAG 检索范围",
+            "page_or_section_scope": "",
+            "risk": "LOW" if parse_meta.get("parse_confidence") == "HIGH" else "HIGH" if source_role == "core" else "MEDIUM",
+            "notes": parse_meta.get("notes", ""),
+        }
+        if "page_count" in parse_meta:
+            source_record["page_count"] = parse_meta["page_count"]
+        if "table_count" in parse_meta:
+            source_record["table_count"] = parse_meta["table_count"]
+        if "sheet_count" in parse_meta:
+            source_record["sheet_count"] = parse_meta["sheet_count"]
+        sources.append(source_record)
+        fragments.extend(parsed_fragments)
+        group = source_group_for_type(source_type)
+        registered_sources.setdefault(group, []).append(source_record["file"])
+
+    readiness = {
+        "version": 1,
+        "project_name": project.get("project_name", ""),
+        "package_name": project.get("package_name", ""),
+        "target_package_confirmed": bool(project.get("package_confirmed")),
+        "sources": sources,
+        "blocking_items": [],
+        "human_confirmations": [],
+    }
+    readiness_report = validate_source_readiness(readiness) if sources else {
+        "status": "REJECT",
+        "source_count": 0,
+        "blocking_source_count": 0,
+        "findings": [{"severity": "BLOCKER", "message": "未发现可入库来源文件"}],
+    }
+    readiness["blocking_items"] = [item for item in readiness_report.get("findings", []) if item.get("severity") == "BLOCKER"]
+
+    source_index = {
+        "version": 1,
+        "project_name": project.get("project_name", ""),
+        "package_name": project.get("package_name", ""),
+        "generated_by": "ingest-sources",
+        "sources": sources,
+        "fragments": fragments,
+        "fragment_count": len(fragments),
+    }
+    write_json(project_dir / "inventory" / "source-readiness.json", readiness)
+    write_json(project_dir / "inventory" / "source-index.json", source_index)
+    if project_path.exists():
+        project_sources = project.setdefault("sources", {})
+        for group, files in registered_sources.items():
+            if files:
+                project_sources[group] = files
+        write_json(project_path, project)
+
+    return {
+        "status": readiness_report["status"],
+        "source_count": len(sources),
+        "fragment_count": len(fragments),
+        "outputs": ["inventory/source-readiness.json", "inventory/source-index.json"],
+        "findings": readiness_report.get("findings", []),
+    }
+
+
 def validate_scoring_applicability(data: dict, package_name: str) -> dict:
     findings: list[dict] = []
     groups = data.get("scoring_groups")
@@ -554,6 +1073,226 @@ def validate_scoring_applicability(data: dict, package_name: str) -> dict:
     severities = {item["severity"] for item in findings}
     status = "REJECT" if "BLOCKER" in severities else "REVIEW_REQUIRED" if severities else "PASS"
     return {"status": status, "selected_group_count": len(selected), "findings": findings}
+
+
+def extract_scoring_item_ids(scoring_map: dict) -> set[str]:
+    item_ids: set[str] = set()
+
+    def visit(value: object) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key in {"scoring_item_id", "score_item_id"} and str(child).strip():
+                    item_ids.add(str(child).strip())
+                elif key in {"scoring_item_ids", "score_item_ids", "related_score_item_ids"} and isinstance(child, list):
+                    item_ids.update(str(item).strip() for item in child if str(item).strip())
+                else:
+                    visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(scoring_map)
+    return item_ids
+
+
+def validate_chapter_plan(plan: dict, requirements: dict, scoring_map: dict | None = None) -> dict:
+    findings: list[dict] = []
+    sections = plan.get("sections")
+    writing_tasks = plan.get("writing_tasks")
+    scoring_item_mappings = plan.get("scoring_item_mappings", [])
+    technical_requirement_mappings = plan.get("technical_requirement_mappings", [])
+
+    if not isinstance(sections, list) or not sections:
+        findings.append({"severity": "BLOCKER", "message": "章节规划 sections 为空或不存在"})
+        sections = []
+    if not isinstance(writing_tasks, list) or not writing_tasks:
+        findings.append({"severity": "BLOCKER", "message": "章节规划 writing_tasks 为空或不存在"})
+        writing_tasks = []
+
+    section_ids: set[str] = set()
+    task_ids: set[str] = set()
+    task_outputs: set[str] = set()
+    section_orders: list[int] = []
+
+    for index, section in enumerate(sections, start=1):
+        section_id = str(section.get("section_id", "")).strip()
+        label = section_id or f"第 {index} 节"
+        if not section_id:
+            findings.append({"severity": "CRITICAL", "section_id": label, "message": "缺少 section_id"})
+        elif section_id in section_ids:
+            findings.append({"severity": "CRITICAL", "section_id": label, "message": "section_id 重复"})
+        section_ids.add(section_id)
+
+        if not str(section.get("title", "")).strip():
+            findings.append({"severity": "CRITICAL", "section_id": label, "message": "缺少章节标题"})
+        if not section.get("locked_by_tender_format"):
+            findings.append({"severity": "CRITICAL", "section_id": label, "message": "章节未声明由招标格式锁定"})
+        source = section.get("source", {})
+        if not isinstance(source, dict) or not str(source.get("file", "")).strip():
+            findings.append({"severity": "CRITICAL", "section_id": label, "message": "缺少格式来源文件"})
+        if not isinstance(source, dict) or not str(source.get("original_text", "")).strip():
+            findings.append({"severity": "MAJOR", "section_id": label, "message": "缺少格式来源原文"})
+        order = section.get("order")
+        if isinstance(order, int):
+            section_orders.append(order)
+        else:
+            findings.append({"severity": "MAJOR", "section_id": label, "message": "缺少数字型 order"})
+
+        for task_id in section.get("writing_task_ids", []):
+            if str(task_id).strip():
+                task_ids.add(str(task_id).strip())
+
+    if section_orders and section_orders != sorted(section_orders):
+        findings.append({"severity": "MAJOR", "message": "章节 order 不是递增顺序"})
+
+    writing_task_ids: set[str] = set()
+    task_requirement_ids: set[str] = set()
+    task_scoring_item_ids: set[str] = set()
+    for index, task in enumerate(writing_tasks, start=1):
+        task_id = str(task.get("task_id", "")).strip()
+        label = task_id or f"第 {index} 个任务"
+        if not task_id:
+            findings.append({"severity": "CRITICAL", "task_id": label, "message": "缺少 task_id"})
+        elif task_id in writing_task_ids:
+            findings.append({"severity": "CRITICAL", "task_id": label, "message": "task_id 重复"})
+        writing_task_ids.add(task_id)
+
+        target_section_ids = [str(item).strip() for item in task.get("target_section_ids", []) if str(item).strip()]
+        if not target_section_ids:
+            findings.append({"severity": "CRITICAL", "task_id": label, "message": "缺少 target_section_ids"})
+        for section_id in target_section_ids:
+            if section_id not in section_ids:
+                findings.append({"severity": "BLOCKER", "task_id": label, "message": f"任务引用不存在的章节 {section_id}"})
+
+        output_file = str(task.get("output_file", "")).strip()
+        if not output_file:
+            findings.append({"severity": "CRITICAL", "task_id": label, "message": "缺少 output_file"})
+        elif output_file in task_outputs:
+            findings.append({"severity": "BLOCKER", "task_id": label, "message": f"output_file 重复：{output_file}"})
+        task_outputs.add(output_file)
+
+        if not str(task.get("reason_for_split", "")).strip():
+            findings.append({"severity": "MAJOR", "task_id": label, "message": "缺少拆分依据 reason_for_split"})
+        task_requirement_ids.update(str(item).strip() for item in task.get("requirement_ids", []) if str(item).strip())
+        task_scoring_item_ids.update(str(item).strip() for item in task.get("scoring_item_ids", []) if str(item).strip())
+
+    unlinked_section_tasks = task_ids - writing_task_ids
+    if unlinked_section_tasks:
+        findings.append({"severity": "BLOCKER", "message": f"章节引用了不存在的写作任务：{sorted(unlinked_section_tasks)}"})
+
+    records = requirements.get("records", [])
+    requirement_ids = {str(record.get("requirement_id", "")).strip() for record in records if str(record.get("requirement_id", "")).strip()}
+    mandatory_ids = {
+        str(record.get("requirement_id", "")).strip()
+        for record in records
+        if str(record.get("requirement_id", "")).strip()
+        and (
+            record.get("item_type") in {"technical_requirement", "mandatory_requirement", "rejection_clause"}
+            or bool(record.get("response", {}).get("required", True))
+        )
+    }
+    mapped_requirement_ids = {
+        str(item.get("requirement_id", "")).strip()
+        for item in technical_requirement_mappings
+        if isinstance(item, dict) and str(item.get("requirement_id", "")).strip()
+    }
+    for section in sections:
+        mapped_requirement_ids.update(str(item).strip() for item in section.get("mapped_requirement_ids", []) if str(item).strip())
+    mapped_requirement_ids.update(task_requirement_ids)
+
+    missing_mandatory = mandatory_ids - mapped_requirement_ids
+    if missing_mandatory:
+        findings.append({"severity": "BLOCKER", "message": f"强制/必答原子要点未映射到章节或任务：{sorted(missing_mandatory)}"})
+    unknown_requirements = mapped_requirement_ids - requirement_ids
+    if unknown_requirements:
+        findings.append({"severity": "BLOCKER", "message": f"规划引用不存在的 requirement_id：{sorted(unknown_requirements)}"})
+
+    expected_scoring_ids = extract_scoring_item_ids(scoring_map or {})
+    expected_scoring_ids.update(
+        str(record.get("score", {}).get("score_item_id", "")).strip()
+        for record in records
+        if isinstance(record.get("score"), dict) and str(record.get("score", {}).get("score_item_id", "")).strip()
+    )
+    mapped_scoring_ids = {
+        str(item.get("scoring_item_id", "")).strip()
+        for item in scoring_item_mappings
+        if isinstance(item, dict) and str(item.get("scoring_item_id", "")).strip()
+    }
+    for section in sections:
+        mapped_scoring_ids.update(str(item).strip() for item in section.get("mapped_scoring_item_ids", []) if str(item).strip())
+    mapped_scoring_ids.update(task_scoring_item_ids)
+
+    missing_scoring = expected_scoring_ids - mapped_scoring_ids
+    if missing_scoring:
+        findings.append({"severity": "BLOCKER", "message": f"评分项未映射到章节或任务：{sorted(missing_scoring)}"})
+    if expected_scoring_ids and not mapped_scoring_ids:
+        findings.append({"severity": "BLOCKER", "message": "存在评分项，但章节规划没有任何评分映射"})
+
+    manual_confirmations = plan.get("manual_confirmations", [])
+    if not isinstance(manual_confirmations, list):
+        findings.append({"severity": "MAJOR", "message": "manual_confirmations 必须为数组"})
+
+    severities = {item["severity"] for item in findings}
+    status = "REJECT" if "BLOCKER" in severities else "REVIEW_REQUIRED" if severities.intersection({"CRITICAL", "MAJOR"}) else "PASS"
+    return {
+        "status": status,
+        "section_count": len(sections),
+        "writing_task_count": len(writing_tasks),
+        "mapped_requirement_count": len(mapped_requirement_ids & requirement_ids),
+        "required_requirement_count": len(mandatory_ids),
+        "mapped_scoring_item_count": len(mapped_scoring_ids & expected_scoring_ids) if expected_scoring_ids else len(mapped_scoring_ids),
+        "expected_scoring_item_count": len(expected_scoring_ids),
+        "findings": findings,
+    }
+
+
+def shred_rfp(project_dir: Path, shred_file: Path) -> dict:
+    data = load_json(shred_file)
+    outputs = data.get("outputs", data)
+    output_map = {
+        "atomic_requirements": project_dir / "requirements" / "atomic-requirements.json",
+        "marker_register": project_dir / "requirements" / "marker-register.json",
+        "rejection_clauses": project_dir / "requirements" / "rejection-clauses.json",
+        "scoring_applicability": project_dir / "requirements" / "scoring-applicability.json",
+        "scoring_map": project_dir / "requirements" / "scoring-map.json",
+        "mandatory_requirements": project_dir / "requirements" / "mandatory-requirements.json",
+        "format_rules": project_dir / "requirements" / "format-rules.json",
+        "exclusion_list": project_dir / "requirements" / "exclusion-list.json",
+    }
+    written: list[str] = []
+    for key, path in output_map.items():
+        if key in outputs:
+            write_json(path, outputs[key])
+            written.append(str(path.relative_to(project_dir)))
+
+    report = {"status": "PASS", "written": written, "findings": []}
+    if not written:
+        report["status"] = "REJECT"
+        report["findings"].append({"severity": "BLOCKER", "message": "shred 输入未包含任何可写入的 requirements 产物"})
+        return report
+
+    atomic_path = output_map["atomic_requirements"]
+    marker_path = output_map["marker_register"]
+    rejection_path = output_map["rejection_clauses"]
+    if atomic_path.exists():
+        requirement_report = validate_requirement_register(load_json(atomic_path))
+        report["requirements"] = requirement_report
+    if marker_path.exists():
+        marker_report = validate_marker_register(load_json(marker_path))
+        report["marker_register"] = marker_report
+    if rejection_path.exists():
+        rejection_report = validate_rejection_clauses(load_json(rejection_path))
+        report["rejection_clauses"] = rejection_report
+    if atomic_path.exists() and marker_path.exists() and rejection_path.exists():
+        report["cross_refs"] = validate_requirement_cross_refs(load_json(atomic_path), load_json(marker_path), load_json(rejection_path))
+
+    statuses = [
+        value["status"]
+        for value in report.values()
+        if isinstance(value, dict) and "status" in value
+    ]
+    report["status"] = "REJECT" if "REJECT" in statuses else "REVIEW_REQUIRED" if "REVIEW_REQUIRED" in statuses else "PASS"
+    return report
 
 
 def collect_stage_errors(project_dir: Path, stage: str) -> list[str]:
@@ -822,6 +1561,17 @@ def validate_project(project_dir: Path, stage: str = "export") -> list[str]:
     if not exclusion_list.exists():
         errors.append("G1 未通过：缺少 requirements/exclusion-list.json")
 
+    if stage in {"planning", "drafting", "expansion", "integration", "review", "export"}:
+        chapter_plan = project_dir / "planning" / "chapter-plan.json"
+        if chapter_plan.exists() and atomic_requirements.exists():
+            scoring_map_data = load_json(scoring_map) if scoring_map.exists() else {}
+            plan_report = validate_chapter_plan(load_json(chapter_plan), load_json(atomic_requirements), scoring_map_data)
+            if plan_report["status"] != "PASS":
+                errors.append(
+                    f"G2 未通过：章节规划检查结果为 {plan_report['status']}，"
+                    f"发现 {len(plan_report['findings'])} 个问题"
+                )
+
     export = project.get("export", {})
     if export.get("high_risk_open", 0) > 0:
         errors.append("G4 未通过：仍有高风险问题，禁止导出")
@@ -842,6 +1592,10 @@ def main() -> int:
     plan_parser = subparsers.add_parser("plan", help="生成 subagent 执行计划")
     plan_parser.add_argument("project_dir", type=Path)
 
+    ingest_parser = subparsers.add_parser("ingest-sources", help="解析 PDF/DOCX/XLSX/TXT 来源并生成资料索引和可读性台账")
+    ingest_parser.add_argument("project_dir", type=Path)
+    ingest_parser.add_argument("--report", type=Path)
+
     validate_parser = subparsers.add_parser("validate", help="检查阶段门禁")
     validate_parser.add_argument("project_dir", type=Path)
     validate_parser.add_argument(
@@ -855,11 +1609,22 @@ def main() -> int:
     expansion_parser.add_argument("expanded_file", type=Path)
     expansion_parser.add_argument("--report", type=Path)
 
+    shred_parser = subparsers.add_parser("shred-rfp", help="落盘并校验 RFP/招标文件拆解产物")
+    shred_parser.add_argument("project_dir", type=Path)
+    shred_parser.add_argument("shred_file", type=Path)
+    shred_parser.add_argument("--report", type=Path)
+
     requirements_parser = subparsers.add_parser("check-requirements", help="检查逐条原子要点、标记及废标/否决条款")
     requirements_parser.add_argument("requirements_file", type=Path)
     requirements_parser.add_argument("--markers", type=Path)
     requirements_parser.add_argument("--rejections", type=Path)
     requirements_parser.add_argument("--report", type=Path)
+
+    plan_check_parser = subparsers.add_parser("check-plan", help="检查章节规划对原子要点、评分项和写作任务的覆盖")
+    plan_check_parser.add_argument("chapter_plan_file", type=Path)
+    plan_check_parser.add_argument("--requirements", type=Path, required=True)
+    plan_check_parser.add_argument("--scoring-map", type=Path)
+    plan_check_parser.add_argument("--report", type=Path)
 
     sources_parser = subparsers.add_parser("check-sources", help="检查资料可读性、转换状态和关键文件类型")
     sources_parser.add_argument("source_readiness_file", type=Path)
@@ -882,11 +1647,23 @@ def main() -> int:
         path = build_plan(args.project_dir.resolve())
         print(f"已生成: {path}")
         return 0
+    if args.command == "ingest-sources":
+        report = ingest_sources(args.project_dir.resolve())
+        if args.report:
+            write_json(args.report, report)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["status"] == "PASS" else 1
     if args.command == "check-expansion":
         report = validate_expansion(
             args.source_file.read_text(encoding="utf-8"),
             args.expanded_file.read_text(encoding="utf-8"),
         )
+        if args.report:
+            write_json(args.report, report)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["status"] == "PASS" else 1
+    if args.command == "shred-rfp":
+        report = shred_rfp(args.project_dir.resolve(), args.shred_file.resolve())
         if args.report:
             write_json(args.report, report)
         print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -914,6 +1691,13 @@ def main() -> int:
                 report["cross_refs"]["status"],
             }
             report["status"] = "REJECT" if "REJECT" in statuses else "REVIEW_REQUIRED" if "REVIEW_REQUIRED" in statuses else "PASS"
+        if args.report:
+            write_json(args.report, report)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["status"] == "PASS" else 1
+    if args.command == "check-plan":
+        scoring_map_data = load_json(args.scoring_map) if args.scoring_map else {}
+        report = validate_chapter_plan(load_json(args.chapter_plan_file), load_json(args.requirements), scoring_map_data)
         if args.report:
             write_json(args.report, report)
         print(json.dumps(report, ensure_ascii=False, indent=2))
