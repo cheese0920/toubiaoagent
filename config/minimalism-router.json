@@ -22,7 +22,7 @@
     "intake": {
       "default_level": "L0",
       "executor": "script-or-checklist-first",
-      "deterministic_checks": ["check-sources"],
+      "deterministic_checks": ["ingest-sources", "check-sources"],
       "escalate_to_agent_when": [
         "文件解析失败且需要语义判断",
         "多项目、多标包材料混杂且无法按元数据隔离",
@@ -32,7 +32,7 @@
     "requirements": {
       "default_level": "L1",
       "executor": "requirement-analyst with strict schema",
-      "deterministic_checks": ["check-requirements", "check-scoring-applicability"],
+      "deterministic_checks": ["shred-rfp", "check-requirements", "check-scoring-applicability"],
       "escalate_to_agent_when": [
         "特殊标记含义不明",
         "废标/否决条款适用范围不明",
@@ -43,6 +43,7 @@
       "default_level": "L2",
       "executor": "chapter-planner as core scheduling node",
       "deterministic_checks": [
+        "check-plan",
         "technical bid format sections must be locked before writer task generation",
         "scoring items must map into format sections",
         "atomic requirement ids must map to at least one planned section"
@@ -83,7 +84,7 @@
     "review": {
       "default_level": "L0",
       "executor": "quality gate scripts first",
-      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-expansion", "validate"],
+      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-plan", "check-expansion", "validate"],
       "escalate_to_agent_when": [
         "确定性检查发现问题但无法自动给出修复位置",
         "发现项需要语义判断是否误报",

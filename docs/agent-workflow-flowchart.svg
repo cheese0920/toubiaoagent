@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2600" viewBox="0 0 1800 2600">
+  <defs>
+    <style>
+      .bg { fill: #fbfaf7; }
+      .title { font: 700 50px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #17202a; }
+      .subtitle { font: 400 24px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #4a5562; }
+      .small { font: 400 20px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #4a5562; }
+      .note { font: 400 18px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #5b6472; }
+      .label { font: 700 22px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #17202a; }
+      .card-title { font: 700 27px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #17202a; }
+      .card-sub { font: 600 20px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #374151; }
+      .card-text { font: 400 19px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #485363; }
+      .pill-text { font: 700 17px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #ffffff; }
+      .gate-text { font: 700 18px "Microsoft YaHei", "Segoe UI", Arial, sans-serif; fill: #8f1d1d; }
+      .artifact-text { font: 600 17px "Consolas", "Microsoft YaHei", monospace; fill: #263241; }
+      .card { fill: #ffffff; stroke: #d8dee8; stroke-width: 2; rx: 18; }
+      .card-shadow { filter: drop-shadow(0 10px 18px rgba(19, 30, 45, 0.08)); }
+      .l0 { fill: #335c67; }
+      .l1 { fill: #0f766e; }
+      .l2 { fill: #b7791f; }
+      .l3 { fill: #9d174d; }
+      .l4 { fill: #5b21b6; }
+      .gate { fill: #fff1f1; stroke: #df5d5d; stroke-width: 2; rx: 14; }
+      .human { fill: #fff7e6; stroke: #d97706; stroke-width: 2; rx: 14; }
+      .artifact { fill: #eef6ff; stroke: #87add4; stroke-width: 1.5; rx: 12; }
+      .side { fill: #f4f6f8; stroke: #d6dce4; stroke-width: 2; rx: 18; }
+      .arrow { stroke: #7d8794; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .thin-arrow { stroke: #9aa4b2; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+      .dash { stroke-dasharray: 8 7; }
+    </style>
+    <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7d8794"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1800" height="2600"/>
+
+  <text x="90" y="95" class="title">投标 Agent 工作流机制图</text>
+  <text x="90" y="135" class="subtitle">原则：默认工作流化，只有不确定性、语义判断、失败恢复才交给 Agent。</text>
+
+  <g transform="translate(90,170)">
+    <rect x="0" y="0" width="1620" height="95" class="side"/>
+    <text x="28" y="38" class="label">图例</text>
+    <rect x="120" y="22" width="54" height="28" rx="8" class="l0"/><text x="190" y="43" class="small">L0 规则/脚本/校验</text>
+    <rect x="395" y="22" width="54" height="28" rx="8" class="l1"/><text x="465" y="43" class="small">L1 单次有界 LLM</text>
+    <rect x="690" y="22" width="54" height="28" rx="8" class="l2"/><text x="760" y="43" class="small">L2 固定证据约束流程</text>
+    <rect x="1035" y="22" width="54" height="28" rx="8" class="l3"/><text x="1105" y="43" class="small">L3 窄范围子 Agent</text>
+    <rect x="1328" y="22" width="54" height="28" rx="8" class="l4"/><text x="1398" y="43" class="small">L4 总控编排</text>
+    <rect x="120" y="58" width="54" height="20" rx="7" class="gate"/><text x="190" y="76" class="small">确定性 Gate</text>
+    <rect x="395" y="58" width="54" height="20" rx="7" class="human"/><text x="465" y="76" class="small">人工确认点</text>
+    <rect x="690" y="58" width="54" height="20" rx="7" class="artifact"/><text x="760" y="76" class="small">结构化产物</text>
+  </g>
+
+  <g transform="translate(1220,325)">
+    <rect x="0" y="0" width="490" height="350" class="side"/>
+    <text x="28" y="42" class="label">贯穿约束</text>
+    <text x="28" y="84" class="card-text">1. 子 Agent 只拿任务书和 artifact refs</text>
+    <text x="28" y="122" class="card-text">2. 事实必须可回溯到页码/章节/表格位置</text>
+    <text x="28" y="160" class="card-text">3. 未确认片段不得进入正文</text>
+    <text x="28" y="198" class="card-text">4. Gate 失败先定位，再按需调用 reviewer</text>
+    <text x="28" y="236" class="card-text">5. 高风险未关闭时阻断 Word 导出</text>
+    <text x="28" y="274" class="card-text">6. 人工确认废标、评分、技术偏差</text>
+  </g>
+
+  <g transform="translate(90,315)">
+    <rect x="0" y="0" width="1030" height="115" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l4"/>
+    <text x="44" y="51" class="pill-text">L4</text>
+    <text x="125" y="45" class="card-title">总控：technical-bid-orchestrator</text>
+    <text x="125" y="80" class="card-text">不直接写正文；只维护状态、派发任务、检查门禁、触发人工确认和异常恢复。</text>
+  </g>
+
+  <path d="M 605 430 L 605 485" class="arrow"/>
+
+  <g transform="translate(90,485)">
+    <rect x="0" y="0" width="1030" height="195" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l0"/>
+    <text x="44" y="51" class="pill-text">L0</text>
+    <text x="125" y="45" class="card-title">1. Intake 资料摄取与索引</text>
+    <text x="125" y="83" class="card-text">脚本解析 PDF / DOCX / XLSX / TXT / MD，建立可读性、片段、页码、章节路径、表格位置。</text>
+    <rect x="125" y="108" width="310" height="42" class="artifact"/>
+    <text x="143" y="135" class="artifact-text">inventory/source-index.json</text>
+    <rect x="455" y="108" width="355" height="42" class="artifact"/>
+    <text x="473" y="135" class="artifact-text">inventory/source-readiness.json</text>
+    <rect x="830" y="108" width="165" height="42" class="gate"/>
+    <text x="858" y="135" class="gate-text">check-sources</text>
+    <text x="125" y="173" class="note">异常才升级：文件混杂、版本冲突、核心依据无法稳定解析。</text>
+  </g>
+
+  <path d="M 605 680 L 605 735" class="arrow"/>
+
+  <g transform="translate(90,735)">
+    <rect x="0" y="0" width="1030" height="215" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l1"/>
+    <text x="44" y="51" class="pill-text">L1</text>
+    <text x="125" y="45" class="card-title">2. Requirements 招标要求拆解</text>
+    <text x="125" y="83" class="card-text">requirement-analyst 做语义拆解；shred-rfp 写入标准 JSON，并跑确定性交叉校验。</text>
+    <rect x="125" y="108" width="350" height="42" class="artifact"/>
+    <text x="143" y="135" class="artifact-text">requirements/atomic-requirements.json</text>
+    <rect x="495" y="108" width="275" height="42" class="artifact"/>
+    <text x="513" y="135" class="artifact-text">requirements/scoring-map.json</text>
+    <rect x="790" y="108" width="205" height="42" class="gate"/>
+    <text x="813" y="135" class="gate-text">要求/评分 Gate</text>
+    <rect x="125" y="162" width="875" height="36" class="human"/>
+    <text x="145" y="186" class="card-text">人工确认：原子要点、* / ★ 含义、废标/否决条款、评分映射、排除清单。</text>
+  </g>
+
+  <path d="M 605 950 L 605 1005" class="arrow"/>
+
+  <g transform="translate(90,1005)">
+    <rect x="0" y="0" width="1030" height="220" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l2"/>
+    <text x="44" y="51" class="pill-text">L2</text>
+    <text x="125" y="45" class="card-title">3. Planning 章节规划与任务拆分</text>
+    <text x="125" y="83" class="card-text">chapter-planner 先锁定招标文件要求的一/二/三级章节，再把评分项和技术要求映射进去。</text>
+    <rect x="125" y="108" width="286" height="42" class="artifact"/>
+    <text x="143" y="135" class="artifact-text">planning/chapter-plan.json</text>
+    <rect x="431" y="108" width="270" height="42" class="artifact"/>
+    <text x="449" y="135" class="artifact-text">tasks/chapter-task-*.json</text>
+    <rect x="721" y="108" width="170" height="42" class="gate"/>
+    <text x="762" y="135" class="gate-text">check-plan</text>
+    <rect x="125" y="162" width="875" height="36" class="human"/>
+    <text x="145" y="186" class="card-text">人工确认：章节结构必须服从招标格式，评分项和强制要求必须有落点。</text>
+  </g>
+
+  <path d="M 605 1225 L 605 1280" class="arrow"/>
+
+  <g transform="translate(90,1280)">
+    <rect x="0" y="0" width="1030" height="185" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l3"/>
+    <text x="44" y="51" class="pill-text">L3</text>
+    <text x="125" y="45" class="card-title">4. Drafting 并行章节写作</text>
+    <text x="125" y="83" class="card-text">chapter-writer-* 只处理自己的 task，不共享完整上下文，不越权读取或改写其他章节。</text>
+    <rect x="125" y="110" width="245" height="42" class="artifact"/>
+    <text x="143" y="137" class="artifact-text">chapters/*.md</text>
+    <rect x="390" y="110" width="250" height="42" class="artifact"/>
+    <text x="408" y="137" class="artifact-text">evidence/*.json</text>
+    <text x="665" y="137" class="note">停止条件：缺证据、需编造事实、发现跨标包污染。</text>
+  </g>
+
+  <path d="M 605 1465 L 605 1520" class="arrow"/>
+
+  <g transform="translate(90,1520)">
+    <rect x="0" y="0" width="1030" height="185" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l1"/>
+    <text x="44" y="51" class="pill-text">L1</text>
+    <text x="125" y="45" class="card-title">5. Expansion 受控扩写</text>
+    <text x="125" y="83" class="card-text">chapter-expander-* 保留标题、段落顺序、事实边界和引用，把可证实细节展开。</text>
+    <rect x="125" y="110" width="245" height="42" class="artifact"/>
+    <text x="143" y="137" class="artifact-text">expanded/*.md</text>
+    <rect x="390" y="110" width="315" height="42" class="artifact"/>
+    <text x="408" y="137" class="artifact-text">reviews/expansion-*.json</text>
+    <rect x="725" y="110" width="190" height="42" class="gate"/>
+    <text x="748" y="137" class="gate-text">check-expansion</text>
+  </g>
+
+  <path d="M 605 1705 L 605 1760" class="arrow"/>
+
+  <g transform="translate(90,1760)">
+    <rect x="0" y="0" width="1030" height="175" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l2"/>
+    <text x="44" y="51" class="pill-text">L2</text>
+    <text x="125" y="45" class="card-title">6. Integration 合并与溯源</text>
+    <text x="125" y="83" class="card-text">integration-editor 合并已扩写章节，统一术语、承诺口径、去重，并产出可追溯草稿。</text>
+    <rect x="125" y="110" width="360" height="42" class="artifact"/>
+    <text x="143" y="137" class="artifact-text">merged/technical-bid-draft.md</text>
+    <rect x="505" y="110" width="285" height="42" class="artifact"/>
+    <text x="523" y="137" class="artifact-text">merged/traceability.json</text>
+  </g>
+
+  <path d="M 605 1935 L 605 1990" class="arrow"/>
+
+  <g transform="translate(90,1990)">
+    <rect x="0" y="0" width="1030" height="235" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l0"/>
+    <text x="44" y="51" class="pill-text">L0</text>
+    <text x="125" y="45" class="card-title">7. Review 先脚本门禁，失败再 Agent 复核</text>
+    <text x="125" y="83" class="card-text">默认执行 check-sources / check-requirements / check-plan / validate 等确定性检查。</text>
+    <rect x="125" y="108" width="210" height="42" class="gate"/>
+    <text x="164" y="135" class="gate-text">全部质量 Gate</text>
+    <path d="M 350 129 L 455 129" class="thin-arrow dash"/>
+    <rect x="475" y="108" width="395" height="42" class="artifact"/>
+    <text x="493" y="135" class="artifact-text">reviews/compliance|residue|format.json</text>
+    <text x="125" y="176" class="card-text">只有当 Gate 失败且需要语义定位、误报判断、跨章节整改建议时，才调用 reviewer Agent。</text>
+    <rect x="125" y="195" width="875" height="36" class="human"/>
+    <text x="145" y="219" class="card-text">人工确认：中高风险问题、技术偏差、废标风险已关闭。</text>
+  </g>
+
+  <path d="M 605 2225 L 605 2280" class="arrow"/>
+
+  <g transform="translate(90,2280)">
+    <rect x="0" y="0" width="1030" height="155" class="card card-shadow"/>
+    <rect x="28" y="28" width="74" height="34" rx="10" class="l0"/>
+    <text x="44" y="51" class="pill-text">L0</text>
+    <text x="125" y="45" class="card-title">8. Export 门禁通过后导出 Word 初稿</text>
+    <text x="125" y="83" class="card-text">exporter 只在高风险关闭、人工确认完成、draft_only=true 时生成投标文件初稿。</text>
+    <rect x="125" y="108" width="440" height="42" class="artifact"/>
+    <text x="143" y="135" class="artifact-text">output/技术投标文件_初稿.docx</text>
+  </g>
+
+  <g transform="translate(1220,785)">
+    <rect x="0" y="0" width="490" height="480" class="side"/>
+    <text x="28" y="42" class="label">核心机制</text>
+    <text x="28" y="84" class="card-sub">1. 资料先行</text>
+    <text x="28" y="116" class="card-text">没有 source-index 和 readiness，正文生成不启动。</text>
+    <text x="28" y="164" class="card-sub">2. 要求原子化</text>
+    <text x="28" y="196" class="card-text">废标、强制项、评分项先变成可检查 JSON。</text>
+    <text x="28" y="244" class="card-sub">3. 规划锁章节</text>
+    <text x="28" y="276" class="card-text">先按招标格式定框架，再映射评分和技术要求。</text>
+    <text x="28" y="324" class="card-sub">4. 写作窄作用域</text>
+    <text x="28" y="356" class="card-text">writer 只拿自己的任务和授权证据，降低串标污染。</text>
+    <text x="28" y="404" class="card-sub">5. 审查脚本优先</text>
+    <text x="28" y="436" class="card-text">reviewer 是异常处理器，不是常驻主流程。</text>
+  </g>
+
+  <g transform="translate(1220,1390)">
+    <rect x="0" y="0" width="490" height="430" class="side"/>
+    <text x="28" y="42" class="label">下一步完善重点</text>
+    <text x="28" y="84" class="card-text">A. ingest-sources 默认不回写 project.json</text>
+    <text x="28" y="122" class="card-text">B. source-index 模板和字段说明固化</text>
+    <text x="28" y="160" class="card-text">C. 增加真实样例项目端到端 smoke test</text>
+    <text x="28" y="198" class="card-text">D. reviewer 失败报告标准化到修复任务</text>
+    <text x="28" y="236" class="card-text">E. Word 导出前增加版式/目录/表格检查</text>
+    <text x="28" y="274" class="card-text">F. RAG 片段三态准入：AVAILABLE /</text>
+    <text x="58" y="306" class="card-text">NEEDS_CONFIRMATION / DISABLED</text>
+    <text x="28" y="354" class="note">当前最值得先修的是 A：避免资料摄取阶段覆盖用户</text>
+    <text x="28" y="382" class="note">手工维护的项目源文件分组、顺序和别名。</text>
+  </g>
+
+  <text x="90" y="2525" class="note">生成位置：docs/agent-workflow-flowchart.svg    仓库：D:\item\TenderD\toubiaoagent</text>
+</svg>

@@ -18,7 +18,7 @@
       "context_policy": "checklist-and-artifact-refs",
       "agents_only_when": "资料无法按文件类型、元数据或人工清单完成隔离，需要语义判断版本、项目或标包归属",
       "depends_on": [],
-      "deterministic_checks": ["check-sources"],
+      "deterministic_checks": ["ingest-sources", "check-sources"],
       "outputs": [
         "state/workflow-state.json",
         "inventory/source-readiness.json",
@@ -33,7 +33,7 @@
       "default_execution_level": "L1",
       "context_policy": "compact-state-and-artifact-refs",
       "depends_on": ["intake"],
-      "deterministic_checks": ["check-requirements", "check-scoring-applicability"],
+      "deterministic_checks": ["shred-rfp", "check-requirements", "check-scoring-applicability"],
       "outputs": [
         "requirements/atomic-requirements.json",
         "requirements/marker-register.json",
@@ -52,6 +52,7 @@
       "default_execution_level": "L2",
       "context_policy": "compact-state-and-artifact-refs",
       "depends_on": ["requirements"],
+      "deterministic_checks": ["check-plan"],
       "outputs": [
         "planning/chapter-plan.json",
         "planning/scoring-section-map.json",
@@ -94,7 +95,7 @@
       "context_policy": "deterministic-reports-first-agent-on-failure-only",
       "depends_on": ["integration"],
       "parallel": true,
-      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-expansion", "validate"],
+      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-plan", "check-expansion", "validate"],
       "agents_only_when": "确定性门禁发现问题且需要语义定位、误报判断或跨章节整改建议",
       "outputs": ["reviews/*.json"],
       "human_gate": "处理中风险问题并确认技术偏差"
