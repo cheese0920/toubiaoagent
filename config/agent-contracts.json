@@ -1,11 +1,13 @@
 {
-  "version": 1,
+  "version": 2,
   "shared_rules": [
     "只处理当前已确认标包的技术部分",
     "事实、结论和要求必须保留来源文件、页码或章节路径",
     "无法证实的内容必须标为待人工确认，不得自行补全",
     "历史材料与当前项目冲突时，以当前项目为准",
     "历史 RAG 片段不得直接进入正文生成，必须先完成去项目化、残留检测和三态准入",
+    "评分项只能来自当前标包已确认的评分组组合，并绑定 scoring_group_id 与 source_segment_id",
+    "必答要求必须先转换为已确认的我司响应口径，正文与扩写不得改变责任主体、条件、范围、数字、单位或承诺强度",
     "资料门禁不得仅根据文件扩展名阻断流程，必须按文件用途和解析可信度分级处理",
     "subagent 交接优先使用 state/workflow-state.json、任务书路径和 artifact refs，不得默认共享完整聊天历史或整份大型材料",
     "不得修改任务书未授权的文件"
@@ -42,13 +44,14 @@
     },
     "requirement-analyst": {
       "purpose": "将招标要求和评分项逐条拆成可独立核验的原子要点，原样记录 *、⭐、废标/否决标记，并建立响应映射",
-      "reads": ["project.json", "inventory/**"],
+      "reads": ["project.json", "inventory/**", "templates/scoring-applicability.json", "templates/scoring-map.json", "templates/response-register.json"],
       "writes": [
         "requirements/atomic-requirements.json",
         "requirements/marker-register.json",
         "requirements/rejection-clauses.json",
         "requirements/scoring-applicability.json",
         "requirements/scoring-map.json",
+        "requirements/response-register.json",
         "requirements/mandatory-requirements.json",
         "requirements/format-rules.json",
         "requirements/exclusion-list.json"
@@ -58,20 +61,31 @@
         "保留要求原文、来源文件、页码、章节路径和上级条款编号",
         "原样记录 *、⭐、加粗、下划线、醒目色及废标、否决、无效投标等标记",
         "将评分项继续拆成逐条得分条件、扣分条件、证明材料要求和响应位置",
-        "每组评分标准必须记录其适用标包原文，明确是否适用于当前标包",
+        "逐项保留最高得分档原文，并将其拆成可独立响应的评分内容对象、程度或质量标准、全局编写约束和证明材料要求",
+        "评分内容对象保留原文短语和原始顺序；全面、详细、较好、合理等程度词归入 quality_criteria，不得伪装成内容对象",
+        "结合项目建设内容、横向比较等不直接形成正文主题的表述分别登记为 global_constraints 或 evaluation_method，不得作为目录标题",
+        "评分标准按来源逻辑片段建立边界，记录 source_segment、适用规则、排除规则、覆盖关系和人工确认状态，不得只依赖 PDF 页码",
+        "允许通用评分组、标包共用组、标包专项组和补遗覆盖组按 UNION_WITH_OVERRIDE 组合；每个评分项必须携带 scoring_group_id 和 source_segment_id",
+        "将每条招标要求拆出责任主体、动作、对象、触发条件、范围和数值参数，并形成独立 response_item_id",
+        "供应商义务转写为可直接进入正文的我司响应口径，例如原文‘集中评审阶段不少于1人现场联络’转写为‘我司将在集中评审阶段安排不少于1人负责现场联络’",
+        "采购方义务采用‘我司理解并配合采购方……’口径，禁止性要求采用‘我司承诺不……’口径，评分期待形成具体方案响应，不得擅自升级为额外履约承诺",
+        "每条响应口径记录 fixed_elements、allowed_expansion、forbidden_changes、来源引用和确认状态；条件、范围、数字、单位及责任主体必须保持不变",
         "明确每个原子要点的适用标包、责任章节、证据要求和确认状态"
       ],
       "must_not": [
         "仅凭 * 或 ⭐ 自动判断其法律或评审含义",
         "遗漏表格、脚注、附件、图片或格式说明中的要求",
         "把废标或否决条款降级为一般提醒",
-        "用摘要替代要求原文"
+        "用摘要替代要求原文",
+        "把采购方义务改写为我司义务",
+        "将集中评审阶段的现场联络扩大为全周期驻场",
+        "让 PENDING、NEEDS_CONFIRMATION、CONFLICT 或 NO_DRAFT 响应口径进入正文任务"
       ],
       "must_stop_when": ["当前标包未确认", "评分办法或技术规范缺失", "标包边界存在冲突", "* 或 ⭐ 的含义无法从文件中确认", "发现废标/否决条款但适用条件不明确"]
     },
     "chapter-planner": {
-      "purpose": "在当前标包技术上下文下进行章节规划：先依据招标文件技术投标文件格式确定一级章节结构，再结合技术评分项、技术规范书和服务范围要求进行二级或三级拆分，并生成可执行写作任务",
-      "reads": ["requirements/**", "inventory/source-index.json", "templates/chapter-plan.json", "templates/chapter-task.json"],
+      "purpose": "在当前标包技术上下文下进行章节规划：先依据招标文件技术投标文件格式确定一级章节结构，再按详细评审分项要素顺序映射二级标题，将最高得分档原文中的评分内容对象逐项映射为三级标题，并结合技术规范书、服务范围和项目实际形成可执行的下级标题与写作任务",
+      "reads": ["requirements/**", "inventory/source-index.json", "templates/scoring-map.json", "templates/response-register.json", "templates/chapter-plan.json", "templates/chapter-task.json", "templates/grounding-pack.json", "templates/paragraph-plan.json"],
       "writes": [
         "planning/chapter-plan.json",
         "planning/scoring-section-map.json",
@@ -81,55 +95,134 @@
       "must_do": [
         "严格依据招标文件中的技术投标文件格式确定一级章节名称、顺序和层级",
         "当格式要求与评分项结构不一致时，以投标文件格式为一级框架，以评分项作为章节内部展开依据",
-        "结合技术评分项分值、评分内容体量、技术规范书和服务范围要求，对章节进行二级或三级拆分",
+        "二级标题原则上按当前标包适用的详细评审分项要素顺序映射，不得用通用模板标题替代评分分项",
+        "优先读取最高得分档，将评分原文拆成评分内容对象、质量标准、全局编写约束和证明材料要求；三级标题只承接可独立响应的评分内容对象",
+        "每个三级标题原则上只对应一个 score_atom_id，标题应直接采用或忠实保留该评分内容对象的原文表述，确保评分原文、目录标题和写作任务可逐项核对",
+        "全面、详细、较好、合理、可行性高等程度或质量修饰语写入 writing_quality_criteria，不得单独生成完整性、合理性、详细性等空泛标题",
+        "结合项目建设内容等全局表述写入 global_constraints 并作用于该评分项全部写作任务；横向比较等评审方式只登记 evaluation_method，不得生成标题",
+        "三级以下标题必须围绕该评分内容对象，结合本项目技术规范书、服务范围、交付物、实施场景和项目实际继续细化，每个父标题下同级子标题原则上控制在 3-4 个，最多不得超过 5 个",
+        "详细的初步设计技术方案、实施方案、服务方案等评分内容对象，必须按本项目服务实施闭环理解和细化，可覆盖服务策略、工作内容与流程、组织岗位与资源、进度质量安全风险保障、交付成果与评审验收支撑，不得仅窄化为拟建系统功能或架构说明",
+        "同一组织、进度、质量、风险、交付物等内容被多个评分项要求时，指定一个 primary_section_id，并通过 supporting_section_ids 和 response_strategy 记录关联响应及去重方式；不得因存在专项评分章节就从完整技术方案中机械删除",
+        "项目建设思路、服务方案、实施方案等通用名称章节必须先定位其对应评分分项，再按评分描述和项目实际形成 2-3 级下钻结构，不得只套总体思路、建设原则、实施路径等泛化目录",
+        "结合技术评分项分值、评分内容体量、技术规范书和服务范围要求，对章节进行二级、三级及必要的四级拆分",
         "对分值较高、内容范围较大的评分项，在对应格式章节下拆分为多个可执行写作任务",
-        "输出章节规划表、评分项映射关系、技术要求映射关系、章节拆分依据和人工确认事项",
-        "为每个写作任务明确目标格式章节、覆盖评分项、覆盖原子要点、允许来源、禁用内容和输出文件",
+        "输出章节规划表、评分项映射关系、技术要求映射关系、标题层级来源、章节拆分依据和人工确认事项",
+        "将每个已确认 response_item_id 映射到 primary_section_id、supporting_section_ids 和具体写作任务，禁止未确认口径进入任务",
+        "每个任务只携带当前标包已选中的 allowed_scoring_group_ids，并排除已覆盖、冲突或明确排除的评分组",
+        "为每个写作任务明确目标格式章节、覆盖评分项、覆盖原子要点、允许来源、禁用内容、章节依据包、段落计划、正文、证据、初稿审查和扩写任务文件路径",
         "为写作任务仅分配 AVAILABLE 或已人工确认的 NEEDS_CONFIRMATION 历史 RAG 片段"
       ],
       "must_not": [
         "直接生成正文",
         "按默认章节或历史模板擅自生成一级章节",
-        "按单个评分项机械生成 writer 任务",
+        "在二级及以下标题中套用与评分项无映射关系的泛化模板",
+        "遗漏评分描述中的得分关键词或证明材料要求",
+        "跳过最高得分档原文，直接按历史目录、经验目录或技术规范书主题生成三级标题",
+        "将质量程度词或评审方式单独生成为三级标题",
+        "把完整技术方案窄化为拟建系统设计说明，遗漏服务组织、职责、进度、质量、安全风险或交付验收支撑",
+        "对交叉内容进行整段复制，或因其他章节已有专项响应而将其从当前评分项完全删除",
+        "按单个评分项机械生成 chapter-realizer 任务",
         "改动招标文件要求的章节名称、顺序或层级",
         "将评分项结构凌驾于技术投标文件格式之上"
       ],
-      "must_stop_when": ["技术投标文件格式无法定位", "格式要求与评分项结构冲突且无法在格式章节内展开", "评分项无法映射到任何格式章节", "任务之间存在明显写入冲突"]
+      "must_stop_when": ["技术投标文件格式无法定位", "最高得分档原文缺失或评分内容对象尚未完成原子化", "格式要求与评分项结构冲突且无法在格式章节内展开", "评分项无法映射到任何格式章节", "交叉内容无法确定主响应章节或去重策略", "任务之间存在明显写入冲突"]
     },
-    "chapter-writer-*": {
-      "purpose": "依据单个章节任务书编写响应正文并维护证据清单",
-      "reads": ["tasks/<assigned-task>.json", "任务书允许的来源材料"],
+    "content-grounder": {
+      "purpose": "在章节初稿生成前，为每个章节任务构造章节依据包和段落写作计划，确保正文生成基于允许评分组、评分原文、技术规范、项目实际、已确认我司响应口径、来源引用、知识卡和废标风险边界",
+      "reads": ["tasks/<assigned-task>.json", "requirements/**", "inventory/source-index.json", "technical-bid-authoring/references/<knowledge-type>/knowledge-card.md", "templates/grounding-pack.json", "templates/paragraph-plan.json"],
+      "writes": ["grounding/<assigned-chapter>.json", "paragraph-plans/<assigned-chapter>.json"],
+      "must_do": [
+        "逐项绑定章节任务覆盖的评分项、score_atom、质量标准和全局约束",
+        "仅传递任务允许评分组内的评分项，并把任务 response_item_id 对应的 canonical_response、fixed_elements、allowed_expansion 和 forbidden_changes 写入 response_refs",
+        "从当前项目招标文件、技术规范书和资料索引中提取项目事实、项目关键词、服务对象、执行动作和交付成果",
+        "按章节任务选择对应知识卡，但只作为结构、方法和表达参考，不作为事实来源",
+        "为每个三级或四级主响应标题生成段落写作计划，明确写作对象、评分绑定、项目实际、执行动作、控制节点、交付成果和来源引用",
+        "涉及履约要求的段落计划必须绑定 response_item_id 和 canonical_response，不得只抄招标原文",
+        "写入禁用承诺、禁用连接词、废标/否决条款 ID 和待人工确认问题",
+        "无法找到项目事实或来源引用时标记为 open_questions，不得让 realizer 自行补事实"
+      ],
+      "must_not": [
+        "直接生成正文",
+        "把知识卡或历史片段当作当前项目事实来源",
+        "为段落计划编造人员、资质、业绩、时限、驻场、免费服务、系统功能、接口能力或额外承诺",
+        "遗漏任务绑定的废标/否决条款",
+        "输出没有来源引用的项目事实"
+      ],
+      "must_stop_when": ["任务书缺少 planned_outline", "评分项或 score_atom 未绑定", "核心技术规范或项目事实无法定位", "废标/否决条款适用范围未确认", "依据不足且无法形成段落写作计划"]
+    },
+    "chapter-realizer-*": {
+      "purpose": "依据已确认章节任务书、planned_outline、章节依据包和段落写作计划生成章节主体初稿，将标题树、评分点、原子要求、项目实际、执行动作、控制节点、交付成果和证据引用真实落位；只生成初稿，不承担扩写深化职责",
+      "reads": ["tasks/<assigned-task>.json", "grounding/<assigned-chapter>.json", "paragraph-plans/<assigned-chapter>.json", "requirements/response-register.json", "templates/chapter-evidence.json", "任务书允许的来源材料"],
       "writes": ["chapters/<assigned-chapter>.md", "evidence/<assigned-chapter>.json"],
       "must_do": [
+        "严格使用任务书中的 planned_outline，不得自行新增、删除、重排或重命名标题",
+        "严格使用章节依据包和段落写作计划，先按段落计划写主体内容，再形成正式正文",
+        "围绕每个标题生成基础正文，使评分项、原子要求、技术规范要求、项目实际、执行动作、控制节点、交付成果和来源证据在章节中有明确落点",
+        "正文以“我司”视角形成正式、稳健的技术标初稿，但不追求最终篇幅或三倍扩写",
+        "对任务绑定的每个 response_item_id 先原样落入已确认 canonical_response，再围绕 allowed_expansion 补充执行动作、控制节点和成果",
+        "完整保留响应口径中的责任主体、触发条件、适用范围、数字、单位和强度；采购方义务只写我司理解与配合，不得改成我司代为承担",
+        "禁用首先、其次、再次、此外、另外、最后、综上、综上所述、总之、由此可见、可以看出等模板化连接词",
         "仅使用任务书允许的当前项目材料和已清洗历史 RAG 片段",
         "历史片段只能作为表达、方法和结构参考，不能替代当前项目要求和技术规范",
         "引用历史片段形成正文前，应再次检查清洗后内容是否存在历史项目、客户、周期、采购编号或其他标包残留",
-        "NEEDS_CONFIRMATION 片段必须已有人工作出可用确认后才能使用"
+        "NEEDS_CONFIRMATION 片段必须已有人工作出可用确认后才能使用",
+        "对无来源支撑的事实、参数、人员、时限、驻场、接口、功能和承诺标记为待人工确认",
+        "同步按 templates/chapter-evidence.json 维护 evidence/<assigned-chapter>.json，记录正文关键结论、评分响应、段落计划 ID 和来源引用",
+        "在 evidence 的段落和 supported_claims 中登记 response_item_ids，使正文可反查到要求—响应口径台账",
+        "强事实和承诺必须逐项记录 claim_text 与 source_refs，不得用整章泛化来源替代"
       ],
       "must_not": [
+        "承担 chapter-expander-* 的扩写深化职责",
+        "为了凑篇幅进行页级模板轮转、同义反复或空泛堆砌",
+        "绕过章节依据包或段落写作计划直接自由发挥",
+        "改变 planner 已确认的标题树和评分响应方向",
         "读取或使用未清洗的 original_content 作为正文依据",
         "使用 DISABLED 历史片段",
         "将历史项目事实、人员、业绩、周期或承诺迁移到当前正文"
       ],
-      "must_stop_when": ["任务书要求编造事实或承诺", "必要证据缺失", "发现其他标包污染", "任务书包含未确认或禁用历史片段"]
+      "must_stop_when": ["任务书缺少 planned_outline", "缺少章节依据包或段落写作计划", "任务书要求编造事实或承诺", "必要证据缺失", "发现其他标包污染", "任务书包含未确认或禁用历史片段", "发现废标/否决风险无法规避"]
+    },
+    "chapter-writer-*": {
+      "purpose": "兼容性别名：职责等同于 chapter-realizer-*，只负责根据已确认章节任务书生成章节初稿，不负责扩写深化",
+      "reads": ["tasks/<assigned-task>.json", "grounding/<assigned-chapter>.json", "paragraph-plans/<assigned-chapter>.json", "requirements/response-register.json", "templates/chapter-evidence.json", "任务书允许的来源材料"],
+      "writes": ["chapters/<assigned-chapter>.md", "evidence/<assigned-chapter>.json"],
+      "must_do": [
+        "执行 chapter-realizer-* 的全部约束",
+        "严格使用 planned_outline 生成章节初稿",
+        "严格使用章节依据包和段落写作计划生成主体内容",
+        "执行 chapter-realizer-* 的 response_item_id、canonical_response 和 fixed_elements 约束",
+        "为关键事实、评分响应和承诺边界维护证据引用"
+      ],
+      "must_not": [
+        "承担 chapter-expander-* 的扩写深化职责",
+        "进行页级模板轮转生成",
+        "重构章节标题树",
+        "读取或使用未清洗的 original_content 作为正文依据",
+        "使用 DISABLED 历史片段",
+        "将历史项目事实、人员、业绩、周期或承诺迁移到当前正文"
+      ],
+      "must_stop_when": ["任务书缺少 planned_outline", "任务书要求编造事实或承诺", "必要证据缺失", "发现其他标包污染", "任务书包含未确认或禁用历史片段"]
     },
     "chapter-expander-*": {
       "purpose": "严格遵循原有分段结构，将章节正文扩写至原文约 3 倍，同时完整保留官样文风、我司视角、核心细节和引用",
-      "reads": ["tasks/<assigned-expansion-task>.json", "chapters/<assigned-chapter>.md", "evidence/<assigned-chapter>.json"],
+      "reads": ["tasks/<assigned-expansion-task>.json", "chapters/<assigned-chapter>.md", "evidence/<assigned-chapter>.json", "grounding/<assigned-chapter>.json", "paragraph-plans/<assigned-chapter>.json", "requirements/response-register.json"],
       "writes": ["expanded/<assigned-chapter>.md", "reviews/expansion-<assigned-chapter>.json"],
       "must_preserve": [
         "全部标题及标题层级",
         "原有分段顺序与段落数量",
         "我司视角和正式官样文风",
         "全部核心事实、参数、约束、承诺边界与证据引用",
+        "全部 response_item_id、canonical_response、fixed_elements 及其条件、范围、数字和单位",
         "段落之间的因果、递进、并列和承接关系"
       ],
       "must_not": [
         "新增未经来源支持的事实、功能、人员、业绩、时限或承诺",
+        "扩大、缩小或改变已确认响应口径，例如将集中评审阶段现场联络扩大为全周期驻场",
         "删除、合并、拆分、重排原有段落",
         "将我司视角改为第三方、采购人或泛化视角",
         "在段首使用概括、总结或结论性引导语",
         "在段尾使用综上、总之、由此可见等总结性收束语",
+        "使用首先、其次、再次、此外、另外、最后、可以看出等模板化连接词",
         "通过同义反复、空泛口号或堆砌形容词凑字数"
       ],
       "acceptance": {
@@ -139,25 +232,31 @@
         "structure_must_match": true,
         "new_claims_allowed": false
       },
-      "must_stop_when": ["原文结构无法识别", "原文存在事实或承诺冲突", "扩写所需细节无来源支持", "无法在不新增事实的前提下达到最低扩写比例"]
+      "must_stop_when": ["原文结构无法识别", "原文存在事实或承诺冲突", "扩写所需细节无来源支持", "扩写将触发废标/否决风险", "无法在不新增事实的前提下达到最低扩写比例"]
     },
     "integration-editor": {
-      "purpose": "合并扩写后的章节、统一术语和承诺口径、去除重复",
+      "purpose": "合并扩写后的章节、统一术语和要求—响应口径、去除重复",
       "reads": ["expanded/**", "evidence/**", "requirements/**"],
       "writes": ["merged/technical-bid-draft.md", "merged/traceability.json"],
-      "must_stop_when": ["章节间存在无法裁决的技术冲突", "引用无法回溯"]
+      "must_stop_when": ["章节间存在无法裁决的技术冲突", "同一 response_item_id 在不同章节出现责任主体、条件、范围、数值或承诺强度冲突", "引用无法回溯"]
     },
     "compliance-reviewer": {
       "purpose": "检查评分覆盖、强制条款和技术偏差一致性",
-      "reads": ["merged/**", "requirements/**"],
+      "reads": ["merged/**", "requirements/**", "requirements/response-register.json"],
       "writes": ["reviews/compliance.json"],
       "must_stop_when": ["发现高风险合规问题"]
     },
+    "rejection-reviewer": {
+      "purpose": "检查废标、否决投标、无效投标和实质性不响应风险，覆盖章节初稿、扩写稿、合稿和技术偏差表一致性",
+      "reads": ["merged/**", "chapters/**", "expanded/**", "evidence/**", "requirements/rejection-clauses.json", "requirements/response-register.json", "tasks/**"],
+      "writes": ["reviews/rejection.json"],
+      "must_stop_when": ["发现未关闭的废标/否决风险", "废标/否决条款适用范围未确认", "正文与技术偏差表存在不一致"]
+    },
     "residue-reviewer": {
       "purpose": "检查跨标包污染、历史残留和未经确认承诺",
-      "reads": ["merged/**", "requirements/exclusion-list.json", "inventory/project-whitelist.json"],
+      "reads": ["merged/**", "requirements/exclusion-list.json", "requirements/response-register.json", "inventory/project-whitelist.json"],
       "writes": ["reviews/residue.json"],
-      "must_stop_when": ["发现其他项目核心信息残留", "发现未经证实的强承诺"]
+      "must_stop_when": ["发现其他项目核心信息残留", "发现未经证实的强承诺", "发现正文超出 response-register 的 allowed_expansion 或改变 fixed_elements"]
     },
     "format-reviewer": {
       "purpose": "检查目录、编号、表格、附件和格式完整性",

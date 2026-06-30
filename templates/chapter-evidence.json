@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "task_id": "",
+  "chapter_file": "",
+  "paragraphs": [
+    {
+      "paragraph_id": "",
+      "paragraph_plan_ids": [],
+      "section_id": "",
+      "scoring_item_ids": [],
+      "score_atom_ids": [],
+      "requirement_ids": [],
+      "response_item_ids": [],
+      "rejection_clause_ids": [],
+      "supported_claims": [
+        {
+          "claim_text": "",
+          "response_item_ids": [],
+          "source_refs": []
+        }
+      ],
+      "source_refs": []
+    }
+  ],
+  "unresolved_claims": [],
+  "review_note": "事实、参数、人员、资质、业绩、时限、驻场、免费服务、系统功能、接口能力和承诺必须逐项绑定来源；无法绑定的内容不得进入正文。"
+}

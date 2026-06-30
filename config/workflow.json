@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "coordinator": "technical-bid-orchestrator",
   "principles": {
     "chapter_agent_min": 2,
@@ -33,18 +33,19 @@
       "default_execution_level": "L1",
       "context_policy": "compact-state-and-artifact-refs",
       "depends_on": ["intake"],
-      "deterministic_checks": ["shred-rfp", "check-requirements", "check-scoring-applicability"],
+      "deterministic_checks": ["shred-rfp", "check-requirements", "check-scoring-applicability", "check-scoring-map", "check-response-register"],
       "outputs": [
         "requirements/atomic-requirements.json",
         "requirements/marker-register.json",
         "requirements/rejection-clauses.json",
         "requirements/scoring-applicability.json",
         "requirements/scoring-map.json",
+        "requirements/response-register.json",
         "requirements/mandatory-requirements.json",
         "requirements/format-rules.json",
         "requirements/exclusion-list.json"
       ],
-      "human_gate": "逐条确认原子要点、* 与 ⭐ 的含义、废标/否决条款、评分项映射和排除清单"
+      "human_gate": "逐条确认原子要点、* 与 ⭐ 的含义、废标/否决条款、当前标包评分组组合及逻辑边界、最高得分档原文、评分内容对象、质量标准、全局编写约束、我司响应口径和排除清单"
     },
     {
       "id": "planning",
@@ -59,16 +60,28 @@
         "planning/technical-requirement-section-map.json",
         "tasks/chapter-task-*.json"
       ],
-      "human_gate": "确认一级章节严格符合招标文件技术投标格式，评分项和技术要求均映射到格式章节内，任务拆分粒度可执行"
+      "human_gate": "确认一级章节严格符合招标文件技术投标格式，二级标题按评分分项顺序映射，三级标题与最高得分档评分内容对象逐项对应，三级以下结合项目实际，交叉内容已设置主响应、关联响应和去重策略，各 response_item_id 已映射到主响应章节和任务"
+    },
+    {
+      "id": "grounding",
+      "agents": ["content-grounder"],
+      "default_execution_level": "L2",
+      "context_policy": "task-scoped-sources-knowledge-cards-and-rejection-refs",
+      "depends_on": ["planning"],
+      "parallel": true,
+      "deterministic_checks": ["check-grounding-pack", "check-paragraph-plan"],
+      "outputs": ["grounding/*.json", "paragraph-plans/*.json"],
+      "human_gate": "确认每个章节任务已有章节依据包和段落写作计划，已绑定允许评分组、评分项、技术规范、项目实际、已确认我司响应口径、来源引用、禁用变更和废标项"
     },
     {
       "id": "drafting",
-      "agents": ["chapter-writer-*"],
+      "agents": ["chapter-realizer-*"],
       "default_execution_level": "L3",
       "context_policy": "task-scoped-artifact-refs-only",
-      "depends_on": ["planning"],
+      "depends_on": ["grounding"],
       "parallel": true,
-      "outputs": ["chapters/*.md", "evidence/*.json"]
+      "deterministic_checks": ["check-chapter-draft", "check-responses", "check-rejection"],
+      "outputs": ["chapters/*.md", "evidence/*.json", "reviews/chapter-draft-*.json"]
     },
     {
       "id": "expansion",
@@ -77,7 +90,9 @@
       "context_policy": "single-chapter-artifact-refs-only",
       "depends_on": ["drafting"],
       "parallel": true,
-      "deterministic_checks": ["check-expansion"],
+      "deterministic_checks": ["check-expansion", "check-responses", "check-rejection"],
+      "max_revision_rounds": 2,
+      "on_validation_failure": "targeted-revision-then-human-review",
       "outputs": ["expanded/*.md", "reviews/expansion-*.json"]
     },
     {
@@ -90,12 +105,12 @@
     },
     {
       "id": "review",
-      "agents": ["compliance-reviewer", "residue-reviewer", "format-reviewer"],
+      "agents": ["compliance-reviewer", "rejection-reviewer", "residue-reviewer", "format-reviewer"],
       "default_execution_level": "L0",
       "context_policy": "deterministic-reports-first-agent-on-failure-only",
       "depends_on": ["integration"],
       "parallel": true,
-      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-plan", "check-expansion", "validate"],
+      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-scoring-map", "check-response-register", "check-plan", "check-grounding-pack", "check-paragraph-plan", "check-chapter-draft", "check-responses", "check-expansion", "check-rejection", "validate"],
       "agents_only_when": "确定性门禁发现问题且需要语义定位、误报判断或跨章节整改建议",
       "outputs": ["reviews/*.json"],
       "human_gate": "处理中风险问题并确认技术偏差"

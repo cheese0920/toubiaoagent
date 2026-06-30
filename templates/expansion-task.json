@@ -4,6 +4,8 @@
   "owner_agent": "chapter-expander-*",
   "source_file": "",
   "evidence_file": "",
+  "grounding_pack_file": "",
+  "paragraph_plan_file": "",
   "output_file": "",
   "review_file": "",
   "preserve": {
@@ -23,14 +25,21 @@
       "展开原文已明确的实施动作、执行步骤和协作关系",
       "解释原文已有机制的执行方式、控制节点和成果形成过程",
       "补强原文已有内容之间的因果、递进、并列和承接关系",
-      "围绕原文已有事实与证据增加操作性描述"
+    "围绕原文已有事实与证据增加操作性描述"
     ]
+  },
+  "expansion_boundary": {
+    "expand_only_existing_objects_actions_control_points_and_deliverables": true,
+    "must_follow_paragraph_plan": true,
+    "must_keep_rejection_clause_safety": true,
+    "max_revision_rounds_after_check": 2
   },
   "forbidden": [
     "新增无来源事实、参数、功能、人员、业绩、时限或承诺",
     "删除、合并、拆分或重排原有段落",
     "改变我司视角、官样文风或核心细节",
     "使用总结式段首或总结式段尾",
+    "使用首先、其次、再次、此外、另外、最后、综上、总之、由此可见、可以看出等模板化连接词",
     "使用同义反复、空泛口号或形容词堆砌凑字数"
   ],
   "acceptance_checks": [

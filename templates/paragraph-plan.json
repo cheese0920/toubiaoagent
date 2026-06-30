@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "task_id": "",
+  "grounding_pack_file": "",
+  "paragraphs": [
+    {
+      "paragraph_plan_id": "",
+      "section_id": "",
+      "section_title": "",
+      "paragraph_role": "body",
+      "response_object": "",
+      "scoring_item_ids": [],
+      "score_atom_ids": [],
+      "requirement_ids": [],
+      "response_item_ids": [],
+      "canonical_response_refs": [
+        {
+          "response_item_id": "",
+          "canonical_response": ""
+        }
+      ],
+      "fixed_response_elements": [
+        {
+          "response_item_id": "",
+          "elements": []
+        }
+      ],
+      "project_actual": "",
+      "required_actions": [],
+      "control_points": [],
+      "deliverables": [],
+      "source_refs": [],
+      "rejection_clause_ids": [],
+      "forbidden_claims": [],
+      "writing_note": "按对象、动作、控制点、成果和来源展开，不使用首先/其次/此外/综上等模板化连接词。"
+    }
+  ],
+  "acceptance_checks": [
+    "每个三级或四级主响应标题至少有一个段落计划",
+    "每个段落计划必须绑定评分项或评分内容对象",
+    "每个段落计划必须包含项目实际、执行动作、控制节点、交付成果和来源引用",
+    "涉及履约要求的段落必须绑定已确认 response_item_id，并保留我司响应口径中的条件、范围和数值",
+    "段落计划不得要求新增无来源事实、参数、人员、资质、业绩、时限或承诺"
+  ]
+}

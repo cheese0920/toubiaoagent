@@ -1,8 +1,14 @@
 {
+  "version": 2,
   "task_id": "",
   "title": "",
-  "owner_agent": "",
+  "owner_agent": "chapter-realizer-*",
   "chapter_plan_id": "",
+  "content_phase": "initial_draft",
+  "grounding_pack_file": "",
+  "paragraph_plan_file": "",
+  "allowed_scoring_group_ids": [],
+  "excluded_scoring_group_ids": [],
   "format_section_ids": [],
   "format_locked_titles": [],
   "format_source": {
@@ -11,10 +17,65 @@
     "section_path": "",
     "original_text": ""
   },
+  "planned_outline": [
+    {
+      "section_id": "",
+      "level": 1,
+      "title": "",
+      "hierarchy_role": "format_primary",
+      "derived_from": "tender_format",
+      "scoring_item_ids": [],
+      "score_atom_ids": [],
+      "response_role": "primary",
+      "quality_criteria": [],
+      "global_constraint_ids": [],
+      "requirement_ids": [],
+      "response_item_ids": [],
+      "source_refs": []
+    }
+  ],
+  "realization_rules": {
+    "purpose": "generate_initial_draft_only",
+    "must_follow_planned_outline": true,
+    "must_cover_scoring_items": true,
+    "must_cover_score_atoms_one_to_one": true,
+    "must_apply_quality_criteria_without_turning_them_into_headings": true,
+    "must_apply_global_constraints": true,
+    "must_follow_primary_supporting_response_strategy": true,
+    "must_cover_atomic_requirements": true,
+    "must_use_confirmed_response_register": true,
+    "must_preserve_canonical_response_and_fixed_elements": true,
+    "must_keep_source_trace": true,
+    "must_use_grounding_pack": true,
+    "must_use_paragraph_plan": true,
+    "must_include_project_actual_actions_control_points_and_deliverables": true,
+    "forbidden_connectors": ["首先", "其次", "再次", "此外", "另外", "最后", "综上", "综上所述", "总之", "由此可见", "可以看出"],
+    "page_level_template_rotation_forbidden": true,
+    "expansion_forbidden": true
+  },
+  "expansion_handoff": {
+    "next_agent": "chapter-expander-*",
+    "expansion_task_file": "",
+    "source_draft_file": "",
+    "evidence_file": "",
+    "handoff_note": "初稿通过 check-chapter-draft 和 check-rejection 后，方可进入 chapter-expander-* 扩写深化。"
+  },
   "split_rationale": "",
   "scoring_items": [],
+  "score_atom_responses": [
+    {
+      "score_atom_id": "",
+      "response_object": "",
+      "primary_section_id": "",
+      "supporting_section_ids": [],
+      "response_strategy": "single_primary_only",
+      "quality_criteria": [],
+      "global_constraints": []
+    }
+  ],
   "mandatory_requirements": [],
   "atomic_requirement_ids": [],
+  "response_item_ids": [],
   "rejection_clause_ids": [],
   "allowed_sources": [],
   "allowed_rag_fragments": [
@@ -28,13 +89,26 @@
   "excluded_content": [],
   "required_sections": [],
   "required_evidence": [],
+  "required_realization_inputs": [
+    "grounding/<assigned-chapter>.json",
+    "paragraph-plans/<assigned-chapter>.json"
+  ],
   "open_questions": [],
   "output_file": "",
+  "evidence_file": "",
+  "draft_review_file": "",
   "acceptance_checks": [
     "一级章节名称、顺序和层级与章节规划表一致",
+    "初稿标题树与 planned_outline 一致",
     "所有评分项均有明确响应位置",
+    "最高得分档中的每个评分内容对象均与一个三级主响应标题逐项对应",
+    "质量标准和全局编写约束已落实到正文任务，但未被错误生成为独立标题",
+    "交叉内容按主响应章节、关联章节和去重策略编写，无机械删除或整段复制",
+    "所有原子要求均有明确响应位置或待人工确认标记",
+    "所有要求均按已确认 response_item_id 的我司响应口径写入，采购方义务未被转写为我司义务",
     "所有事实和结论均可追溯到来源",
     "未引入未经确认的人员、业绩、时限或服务承诺",
-    "未出现其他项目或其他标包专属内容"
+    "未出现其他项目或其他标包专属内容",
+    "未执行扩写深化，扩写工作留给 chapter-expander-*"
   ]
 }

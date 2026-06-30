@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "project_name": "",
+  "package_id": "",
+  "package_name": "",
+  "records": [
+    {
+      "response_item_id": "RSP-0001",
+      "requirement_id": "REQ-0001",
+      "record_type": "SUPPLIER_OBLIGATION",
+      "source_requirement": {
+        "original_text": "",
+        "source_actor": "SUPPLIER",
+        "action": "",
+        "object": "",
+        "trigger_condition": "",
+        "scope": "",
+        "parameters": [
+          {
+            "name": "",
+            "operator": "",
+            "value": "",
+            "unit": ""
+          }
+        ]
+      },
+      "response_mode": "DIRECT_COMMITMENT",
+      "canonical_response": "",
+      "fixed_elements": [],
+      "allowed_expansion": [],
+      "forbidden_changes": [],
+      "source_refs": [],
+      "status": "PENDING",
+      "human_confirmed": false,
+      "required_in_document": true,
+      "primary_section_id": "",
+      "supporting_section_ids": [],
+      "notes": ""
+    }
+  ],
+  "conflicts": []
+}

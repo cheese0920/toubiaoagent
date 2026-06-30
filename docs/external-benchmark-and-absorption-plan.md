@@ -7,8 +7,8 @@
 对本项目最有价值的吸收方向：
 
 - `shred-rfp`：先把招标文件拆成原子要点、评分项、废标/否决条款、格式规则和排除项，不直接进入正文。
-- `plan-check`：章节规划必须证明每个强制要求、评分项和废标响应位置都已覆盖，再派发 writer。
-- 证据约束写作：writer 只接收任务书授权来源、清洗后的 RAG 片段和明确输出文件。
+- `plan-check`：章节规划必须证明每个强制要求、评分项和废标响应位置都已覆盖，再生成章节依据包。
+- 证据约束初稿生成：`content-grounder` 先把任务书转成章节依据包和段落计划，`chapter-realizer-*` 只接收这些受控产物、授权来源和清洗后的 RAG 片段；`chapter-writer-*` 仅作为兼容性别名。
 - 人工闸门：标包、特殊标记含义、评分适用范围、废标/否决条款、技术偏差和导出前高风险问题必须人工确认。
 - 最小充分 Agent：确定性检查走脚本；单次语义抽取走 L1；章节规划走 L2；章节正文和复杂整改才使用 L3 subagent。
 
@@ -30,9 +30,10 @@ flowchart LR
     B --> C["G1: 要求/标记/废标/评分门禁 L0"]
     C --> D["Planner: 章节规划 L2"]
     D --> E["plan-check: 覆盖门禁 L0"]
-    E --> F1["Writer A: 章节正文 L3"]
-    E --> F2["Writer B: 章节正文 L3"]
-    E --> F3["Writer N: 章节正文 L3"]
+    E --> P["Grounding: 依据包与段落计划 L2"]
+    P --> F1["Realizer A: 章节正文 L3"]
+    P --> F2["Realizer B: 章节正文 L3"]
+    P --> F3["Realizer N: 章节正文 L3"]
     F1 --> G["Expansion: 有界扩写 L1"]
     F2 --> G
     F3 --> G
@@ -51,7 +52,8 @@ flowchart LR
 | 要求门禁 | L0 | `check-requirements` 等脚本 | 特殊标记、废标、交叉引用和评分适用可结构化检查 |
 | 章节规划 | L2 | `chapter-planner` | 需要在投标格式、评分项和技术规范之间做证据约束规划 |
 | 规划门禁 | L0 | `check-plan` | 覆盖率、重复输出、未知引用和强制项遗漏可确定性检查 |
-| 章节写作 | L3 | `chapter-writer-*` | 正文生成有开放表达和证据选择，适合窄写入 subagent |
+| 章节依据构造 | L2 | `content-grounder` | 在固定 schema 中绑定评分原文、项目事实、知识卡、来源和废标边界，不生成正文 |
+| 章节初稿生成 | L3 | `chapter-realizer-*` | 初稿生成有开放表达和证据选择，适合窄写入 subagent；不承担扩写深化职责 |
 | 扩写 | L1 | `chapter-expander-*` | 有固定输入输出和结构比例要求，不允许自由新增事实 |
 | 合稿 | L2 | `integration-editor` | 需要跨章节去重、衔接和口径统一 |
 | 审查 | L0 默认，失败升 L3 | 门禁脚本，必要时 reviewer | 先脚本定位风险，再让 Agent 做语义解释和整改建议 |
@@ -61,7 +63,10 @@ flowchart LR
 
 - `python scripts/bidflow.py shred-rfp <project_dir> <shred_file>`：把外部抽取或 `requirement-analyst` 的汇总结果落盘为标准 `requirements/*.json`，并复用要求、标记、废标交叉门禁。
 - `python scripts/bidflow.py check-plan <chapter-plan.json> --requirements <atomic-requirements.json> --scoring-map <scoring-map.json>`：检查章节规划是否覆盖强制/必答要点、评分项和写作任务。
-- `validate --stage planning` 及后续阶段会自动调用章节规划检查，避免未覆盖就进入 writer。
+- `check-grounding-pack` 与 `check-paragraph-plan --grounding`：检查项目事实、评分对象、动作、控制点、交付成果、来源和废标边界是否足以支撑真实正文。
+- `check-chapter-draft`：同时读取任务书、依据包、段落计划和 evidence，检查真实落位、禁用词、空话和逐项来源。
+- `check-rejection`：在初稿、扩写稿和合稿阶段重复检查废标/否决风险。
+- `validate --stage grounding/drafting/expansion/review/export`：沿每个任务书实际重跑门禁，不再只检查产物是否存在。
 
 ## 6. 下一步完善计划
 
@@ -86,8 +91,8 @@ flowchart LR
 ### Phase 4: 规划与写作控制
 
 - 扩展 `check-plan`：检查任务文件是否与 `chapter-plan.json` 一致。
-- 为每个 writer 任务加入 allowed sources、forbidden content、expected evidence。
-- 只允许 writer 写入授权章节和证据文件。
+- 为每个初稿生成任务加入 allowed sources、forbidden content、expected evidence。
+- 只允许 `chapter-realizer-*` 写入授权章节和证据文件。
 
 ### Phase 5: 审查与导出
 
