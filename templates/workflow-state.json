@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "project_name": "",
   "package_name": "",
   "workflow_stage": "intake",
@@ -10,14 +10,22 @@
     "source_readiness": "inventory/source-readiness.json",
     "source_index": "inventory/source-index.json",
     "requirements": "requirements/atomic-requirements.json",
+    "scoring_applicability": "requirements/scoring-applicability.json",
+    "response_register": "requirements/response-register.json",
     "chapter_plan": "planning/chapter-plan.json",
     "tasks": "tasks/chapter-task-*.json",
+    "grounding_packs": "grounding/*.json",
+    "paragraph_plans": "paragraph-plans/*.json",
+    "chapter_drafts": "chapters/*.md",
+    "expanded_chapters": "expanded/*.md",
+    "rejection_review": "reviews/rejection.json",
     "draft": "merged/technical-bid-draft.md"
   },
   "known_fields": {
     "current_package_confirmed": false,
     "technical_format_confirmed": false,
-    "scoring_group_confirmed": false,
+    "scoring_group_composition_confirmed": false,
+    "response_register_confirmed": false,
     "high_risk_open_count": 0
   },
   "uncertainty": "",

@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "project_name": "",
+  "package_name": "",
+  "selected_scoring_group_ids": [],
+  "items": [
+    {
+      "scoring_item_id": "SCI-001",
+      "scoring_group_id": "SCG-001",
+      "source_segment_id": "SEG-SCG-001-01",
+      "detailed_review_element": "",
+      "score_value": 0,
+      "source": {
+        "file": "",
+        "page": "",
+        "section_path": "",
+        "original_text": ""
+      },
+      "evaluation_method": {
+        "original_text": "",
+        "not_a_heading": true
+      },
+      "score_bands": [
+        {
+          "band": "highest",
+          "score_range": "",
+          "original_text": ""
+        }
+      ],
+      "highest_score_band": {
+        "score_range": "",
+        "original_text": ""
+      },
+      "global_constraints": [
+        {
+          "constraint_id": "SGC-001-01",
+          "order": 1,
+          "original_phrase": "",
+          "constraint_type": "project_specificity",
+          "apply_to_all_atoms": true
+        }
+      ],
+      "score_atoms": [
+        {
+          "score_atom_id": "SCA-001-01",
+          "order": 1,
+          "original_phrase": "",
+          "response_object": "",
+          "atom_type": "content_object",
+          "heading_required": true,
+          "quality_criteria": [],
+          "evidence_requirements": [],
+          "notes": ""
+        }
+      ]
+    }
+  ]
+}

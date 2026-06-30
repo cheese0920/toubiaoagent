@@ -50,6 +50,7 @@
       },
       "response": {
         "required": true,
+        "response_item_ids": [],
         "primary_chapter": "",
         "secondary_chapters": [],
         "evidence_required": [],

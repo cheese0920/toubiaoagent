@@ -1,25 +1,72 @@
 {
-  "version": 1,
+  "version": 2,
   "project_name": "",
-  "package_name": "",
+  "current_package": {
+    "package_id": "",
+    "canonical_name": "",
+    "aliases": [],
+    "human_confirmed": false
+  },
+  "source_documents": [
+    {
+      "source_id": "SRC-SCORING-001",
+      "file": "",
+      "version": "",
+      "content_hash": ""
+    }
+  ],
+  "composition_mode": "UNION_WITH_OVERRIDE",
+  "selected_scoring_group_ids": [],
+  "excluded_scoring_group_ids": [],
   "scoring_groups": [
     {
       "scoring_group_id": "SCG-001",
-      "source": {
-        "file": "",
-        "page": "",
-        "section_path": "",
-        "original_scope_text": ""
-      },
-      "applies_to_packages": [],
-      "excluded_packages": [],
+      "group_type": "PACKAGE_SPECIFIC",
+      "source_segments": [
+        {
+          "segment_id": "SEG-SCG-001-01",
+          "source_id": "SRC-SCORING-001",
+          "location_type": "PDF_RANGE",
+          "start_locator": {
+            "page": "",
+            "section_path": "",
+            "anchor_text": ""
+          },
+          "end_locator": {
+            "page": "",
+            "section_path": "",
+            "anchor_text": ""
+          },
+          "included_fragment_ids": [],
+          "excluded_fragment_ids": [],
+          "original_scope_text": ""
+        }
+      ],
+      "applicability_rules": [
+        {
+          "rule_id": "APR-SCG-001-01",
+          "target_type": "PACKAGE",
+          "package_ids": [],
+          "package_names": [],
+          "original_text": "",
+          "source_ref": "SEG-SCG-001-01"
+        }
+      ],
+      "exclusion_rules": [],
+      "supersedes_group_ids": [],
+      "superseded_by_group_ids": [],
+      "scoring_item_ids": [],
       "technical_score_weight": null,
       "business_score_weight": null,
       "price_score_weight": null,
       "performance_score_weight": null,
+      "selection_status": "CANDIDATE",
       "selected_for_current_package": false,
+      "selection_basis": [],
       "human_confirmed": false,
+      "confidence": "LOW",
       "notes": ""
     }
-  ]
+  ],
+  "unresolved_conflicts": []
 }

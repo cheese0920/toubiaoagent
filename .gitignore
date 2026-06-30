@@ -22,5 +22,8 @@ venv/
 *.7z
 *.rar
 output/
+outputs/
+reviews/
+tmp/
 dist/
 build/

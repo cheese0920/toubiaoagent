@@ -1,0 +1,99 @@
+{
+  "version": 2,
+  "task_id": "",
+  "chapter_plan_id": "",
+  "allowed_scoring_group_ids": [],
+  "target_section_ids": [],
+  "planned_outline_refs": [
+    {
+      "section_id": "",
+      "level": 3,
+      "title": "",
+      "response_role": "primary"
+    }
+  ],
+  "scoring_refs": [
+    {
+      "scoring_item_id": "",
+      "detailed_review_element": "",
+      "highest_score_band_text": "",
+      "quality_criteria": [],
+      "global_constraints": []
+    }
+  ],
+  "score_atom_refs": [
+    {
+      "score_atom_id": "",
+      "response_object": "",
+      "primary_section_id": "",
+      "supporting_section_ids": [],
+      "quality_criteria": [],
+      "global_constraint_ids": []
+    }
+  ],
+  "technical_requirement_refs": [
+    {
+      "requirement_id": "",
+      "original_text": "",
+      "source_ref": ""
+    }
+  ],
+  "response_refs": [
+    {
+      "response_item_id": "",
+      "requirement_id": "",
+      "response_mode": "DIRECT_COMMITMENT",
+      "canonical_response": "",
+      "fixed_elements": [],
+      "allowed_expansion": [],
+      "forbidden_changes": [],
+      "source_refs": []
+    }
+  ],
+  "project_facts": [
+    {
+      "fact_id": "",
+      "fact": "",
+      "source_ref": "",
+      "usable_for_sections": []
+    }
+  ],
+  "project_keywords": [],
+  "required_actions": [],
+  "deliverables": [],
+  "knowledge_skill": "technical-bid-authoring",
+  "knowledge_cards": [
+    {
+      "path": "references/<knowledge-type>/knowledge-card.md",
+      "usage": "structure_and_expression_reference_only"
+    }
+  ],
+  "source_refs": [
+    {
+      "source_id": "",
+      "file": "",
+      "page": "",
+      "section_path": "",
+      "original_text": ""
+    }
+  ],
+  "forbidden_claims": [
+    "未经来源确认的人员、资质、业绩、响应时限、驻场、免费服务、系统功能、接口能力和额外承诺"
+  ],
+  "forbidden_phrases": [
+    "首先",
+    "其次",
+    "再次",
+    "此外",
+    "另外",
+    "最后",
+    "综上",
+    "综上所述",
+    "总之",
+    "由此可见",
+    "可以看出"
+  ],
+  "rejection_clause_ids": [],
+  "rejection_scope_confirmed": false,
+  "open_questions": []
+}

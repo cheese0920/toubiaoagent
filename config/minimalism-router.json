@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "principle": "Use the smallest sufficient executor. Prefer deterministic checks, templates, and bounded single-pass tasks before spawning subagents.",
   "state_handoff": {
     "template": "templates/workflow-state.json",
@@ -32,7 +32,7 @@
     "requirements": {
       "default_level": "L1",
       "executor": "requirement-analyst with strict schema",
-      "deterministic_checks": ["shred-rfp", "check-requirements", "check-scoring-applicability"],
+      "deterministic_checks": ["shred-rfp", "check-requirements", "check-scoring-applicability", "check-scoring-map", "check-response-register"],
       "escalate_to_agent_when": [
         "特殊标记含义不明",
         "废标/否决条款适用范围不明",
@@ -44,8 +44,11 @@
       "executor": "chapter-planner as core scheduling node",
       "deterministic_checks": [
         "check-plan",
-        "technical bid format sections must be locked before writer task generation",
+        "technical bid format sections must be locked before chapter-realizer task generation",
         "scoring items must map into format sections",
+        "highest-score-band content objects must map one-to-one to level-3 headings",
+        "quality criteria and global constraints must not become standalone headings",
+        "cross-cutting content must declare primary/supporting sections and a deduplication strategy",
         "atomic requirement ids must map to at least one planned section"
       ],
       "escalate_to_agent_when": [
@@ -56,17 +59,29 @@
         "无法在不改变招标格式章节的前提下完成评分覆盖"
       ]
     },
+    "grounding": {
+      "default_level": "L2",
+      "executor": "content-grounder with fixed grounding-pack and paragraph-plan schemas",
+      "deterministic_checks": ["check-grounding-pack", "check-paragraph-plan"],
+      "escalate_to_agent_when": [
+        "需要把章节任务、评分原文、技术规范、项目事实和知识卡绑定成可写作依据包",
+        "需要为每个三级或四级标题形成段落写作计划",
+        "需要识别禁用承诺、禁用连接词和废标/否决条款边界"
+      ]
+    },
     "drafting": {
       "default_level": "L3",
-      "executor": "chapter-writer-*",
+      "executor": "chapter-realizer-* (chapter-writer-* as compatibility alias)",
+      "deterministic_checks": ["check-chapter-draft", "check-responses", "check-rejection"],
       "escalate_to_agent_when": [
-        "章节任务已有明确输入、输出、证据和禁用内容"
+        "章节任务已有明确输入、输出、证据、禁用内容、章节依据包和段落写作计划",
+        "需要把已确认标题树、评分点、项目事实、段落计划和证据包组织成章节主体初稿"
       ]
     },
     "expansion": {
       "default_level": "L1",
       "executor": "chapter-expander-* only for accepted draft chapters",
-      "deterministic_checks": ["check-expansion"],
+      "deterministic_checks": ["check-expansion", "check-responses", "check-rejection"],
       "escalate_to_agent_when": [
         "原段落细节不足但有可用证据可展开",
         "需要保持官样文风和我司视角的语义扩写"
@@ -84,7 +99,7 @@
     "review": {
       "default_level": "L0",
       "executor": "quality gate scripts first",
-      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-plan", "check-expansion", "validate"],
+      "deterministic_checks": ["check-sources", "check-requirements", "check-scoring-applicability", "check-scoring-map", "check-response-register", "check-plan", "check-grounding-pack", "check-paragraph-plan", "check-chapter-draft", "check-responses", "check-expansion", "check-rejection", "validate"],
       "escalate_to_agent_when": [
         "确定性检查发现问题但无法自动给出修复位置",
         "发现项需要语义判断是否误报",
@@ -101,11 +116,21 @@
   },
   "anti_patterns": [
     "为每个评分项创建独立 subagent",
-    "绕过章节规划表直接按默认章节生成 writer 任务",
+    "绕过章节规划表直接按默认章节生成 chapter-realizer 任务",
     "用评分项结构替代招标文件技术投标格式",
+    "跳过最高得分档原文直接套用通用技术方案目录",
+    "把质量程度词或评审方式生成为独立三级标题",
+    "把完整服务技术方案窄化为拟建系统功能或架构说明",
+    "绕过章节依据包和段落写作计划直接生成正文",
+    "让扩写器补新事实、补人员、补时限或补承诺",
+    "把招标原文中的投标人应或采购人应直接抄进正文，不转换和核验我司响应口径",
+    "把采购方义务错误转写为我司直接履约承诺",
+    "忽略废标/否决条款，只在合稿后人工看一遍",
+    "使用首先、其次、此外、综上等模板化连接词制造逻辑感",
     "让审查 agent 代替可执行门禁脚本",
+    "把章节初稿生成器和章节扩写器合并成一个大生成器",
     "让扩写 agent 自行补事实或补承诺",
-    "在未确认标包、特殊标记、废标条款前启动正文编写",
+    "在未确认标包、特殊标记、废标条款前启动章节初稿生成",
     "让总控 agent 直接写完整正文而不是派发有边界任务"
   ]
 }

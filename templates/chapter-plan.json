@@ -1,7 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "project_name": "",
   "package_name": "",
+  "selected_scoring_group_ids": [],
   "format_source": {
     "file": "",
     "page": "",
@@ -10,6 +11,13 @@
   },
   "planning_principles": [
     "一级章节结构严格依据招标文件技术投标文件格式确定",
+    "二级标题原则上按详细评审分项要素顺序映射",
+    "最高得分档先拆成评分内容对象、质量标准、全局约束和证明材料要求",
+    "三级标题与评分内容对象按原始顺序逐项对应，标题忠实保留评分原文中的响应对象",
+    "质量程度词写入 writing_quality_criteria，全局表述写入 global_constraints，均不得单独作为标题",
+    "三级以下标题围绕对应评分内容对象，结合项目实际、技术规范书、服务范围和交付物继续细化",
+    "每个父标题下同级子标题原则上 3-4 个，最多不超过 5 个",
+    "交叉内容必须设置主响应章节、关联章节和去重策略，不得机械删除或整段重复",
     "评分项作为章节内部展开和任务拆分依据",
     "技术规范书和服务范围要求作为章节内容边界依据",
     "不得擅自改动招标文件要求的章节名称、顺序和层级"
@@ -28,8 +36,31 @@
       },
       "locked_by_tender_format": true,
       "parent_section_id": "",
+      "hierarchy_role": "format_primary",
+      "derived_from": "tender_format",
+      "scoring_derivation": {
+        "scoring_item_id": "",
+        "detailed_review_element": "",
+        "score_description_excerpt": "",
+        "highest_score_band_text": "",
+        "score_atom_ids": [],
+        "response_object": "",
+        "decomposition_keywords": [],
+        "quality_criteria": [],
+        "global_constraint_ids": [],
+        "mapping_role": "primary",
+        "mapped_in_score_order": false
+      },
+      "project_specific_basis": {
+        "technical_spec_ids": [],
+        "service_scope_refs": [],
+        "service_solution_dimensions": [],
+        "project_context_notes": ""
+      },
+      "sibling_limit_checked": true,
       "mapped_scoring_item_ids": [],
       "mapped_requirement_ids": [],
+      "mapped_response_item_ids": [],
       "mapped_technical_spec_ids": [],
       "split_rationale": "",
       "writing_task_ids": [],
@@ -41,8 +72,34 @@
     {
       "scoring_item_id": "",
       "score_value": 0,
+      "detailed_review_element": "",
+      "score_description_excerpt": "",
+      "highest_score_band_text": "",
+      "decomposed_subpoints": [],
+      "global_constraints": [],
+      "writing_quality_criteria": [],
       "primary_section_id": "",
       "supporting_section_ids": [],
+      "score_atom_mappings": [
+        {
+          "score_atom_id": "",
+          "order": 1,
+          "original_phrase": "",
+          "response_object": "",
+          "primary_section_id": "",
+          "supporting_section_ids": [],
+          "response_strategy": "single_primary_only",
+          "quality_criteria": [],
+          "global_constraint_ids": []
+        }
+      ],
+      "mapped_section_hierarchy": [
+        {
+          "section_id": "",
+          "level": 2,
+          "mapping_role": "detailed_review_element"
+        }
+      ],
       "split_into_tasks": [],
       "mapping_rationale": "",
       "coverage_risk": "LOW"
@@ -50,6 +107,15 @@
   ],
   "technical_requirement_mappings": [
     {
+      "requirement_id": "",
+      "primary_section_id": "",
+      "supporting_section_ids": [],
+      "mapping_rationale": ""
+    }
+  ],
+  "response_item_mappings": [
+    {
+      "response_item_id": "",
       "requirement_id": "",
       "primary_section_id": "",
       "supporting_section_ids": [],
@@ -64,8 +130,14 @@
       "reason_for_split": "",
       "scoring_item_ids": [],
       "requirement_ids": [],
+      "response_item_ids": [],
       "estimated_context_size": "MEDIUM",
-      "output_file": ""
+      "grounding_pack_file": "",
+      "paragraph_plan_file": "",
+      "output_file": "",
+      "evidence_file": "",
+      "draft_review_file": "",
+      "expansion_task_file": ""
     }
   ],
   "manual_confirmations": []
